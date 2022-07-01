@@ -1,0 +1,7 @@
+site_name: MitoTNT
+nav:
+    - Home: 'index.md'
+    - Installation: 'installation.md'
+    - Data Preparation: 'data_preparation.md'
+    - Tracking: 'tracking.md'
+    - Visualization: 'visualization.md'
