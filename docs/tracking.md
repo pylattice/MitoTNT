@@ -1,4 +1,4 @@
-#### Now open `tracking_pipeline.ipynb` for mitochondrial network tracking.
+**Now open `tracking_pipeline.ipynb` for mitochondrial network tracking.**
 ## 1. Generate inputs for tracking
 **In this section we will process the raw data into a format that is used for the subsequent tracking.**
 
@@ -35,4 +35,27 @@ Additional parameters need to be set:
 The final node trajectories are saved in `final_node_tracks.csv` file.
 Each row is one node at one time point. 
 Each column is an attribute of the given node, described below.
+
+## 4. Evaluate output
+
+The final node trajectories are saved in final_node_tracks.csv file.\
+Each row is one node at one time point. \
+Each column is an attribute of the given node, described below.\
+
+### Columns
+- `frame_id`: frame number of the node.
+
+- `frame_node_id`: node id at the given frame. Each frame has its own indexing.
+
+- `unique_node_id`: node id shared by all the nodes in the same track at different frames. Each track is uniquely indexed throughout the whole trajectory. This is essetially the tracking information.
+
+- `frame_seg_id`: segment id for all the nodes in the same segment. Each frame has its own indexing. The branching points are not assigned.
+
+- `frame_frag_id`: fragment id for all the nodes in the same connected component. Each frame has its own indexing.
+
+- `connected_unique_node_id`: unique_node_id for neigboring nodes in the graph. This has all the topology information.
+
+- `x`, `y`, `z`: coordinates for the node.
+
+- `intensity`, `width`: pixel intensity and tubular width for the node given by MitoGraph.
 
