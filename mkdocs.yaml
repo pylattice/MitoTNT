@@ -5,3 +5,8 @@ nav:
     - Data Preparation: 'data_preparation.md'
     - Tracking: 'tracking.md'
     - Visualization: 'visualization.md'
+theme:
+    name: readthedocs
+    highlightjs: true
+    hljs_languages:
+        - python
