@@ -1,3 +1,4 @@
+# Detect Remodeling Events
 **In this section we will detect nodes that undergo fusion or fission events based on the tracking results.**
 
 This is done using a sliding-window approach to identify nodes that undergo persistent structural changes as opposed to transient segmentation differences.\
