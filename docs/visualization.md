@@ -21,7 +21,9 @@ tracking_visualization.generate_transformed_tif(data_dir, vis_dir, vis_data_dir,
 ## 2. Create ChimeraX rendering of the skeleton (optional)
 We can use MitoGraph-generated `*skeleton.vtk` files for visualizing skeleton, but this is not ideal because it has fixed width and color.  
 Alternatively here, we can render the skeleton using BILD format in ChimeraX. This allows us to set the skeleton sizes, node sizes and color.
+
 - `skeleton_colors`: a list of colors to render. Typically two colors are needed in order to differentiate current and next frames.  
+
 We use blue for current frame and red for next frame.
 
 - `skeleton_size`: diameter of the cynlinder that connects nodes. Default to 0.2.
