@@ -14,7 +14,6 @@ Please specify:
 - `half_win_size`: size of the half sliding window in number of frames. The higher the value the stricter the requirement for calling fusion/fission. Default to 4.
 
 - `min_tracked_frames`: minimum number of frames that are tracked in both half window in order to declare an event. Default to 2.
-
 To detect remodeling events:
 ```
 detect_fusion_fission.detect()
