@@ -8,7 +8,7 @@ We need to specify the directory to save visualization files
 - `vis_data_dir`: store `.cmap ` and `.bild` files created for each frame and used for visualization. You can use `vis_dir/data/` for example.
 
 ## 1. Transform .tif to match MitoGraph coordinates (optional)
-Because MitoGraph does coordinate transformation, original `.tif` files need to be transformed.\
+Because MitoGraph does coordinate transformation, original `.tif` files need to be transformed.  
 This is only needed if you want to show fluorescence cloud when visualizing tracking.
 ```
 tracking_visualization.generate_transformed_tif(data_dir, vis_dir, vis_data_dir,
@@ -16,12 +16,12 @@ tracking_visualization.generate_transformed_tif(data_dir, vis_dir, vis_data_dir,
 ```
 
 ## 2. Create ChimeraX rendering of the skeleton (optional)
-We can use MitoGraph-generated `*skeleton.vtk` files for visualizing skeleton, but this is not ideal because it has fixed width and color.\
+We can use MitoGraph-generated `*skeleton.vtk` files for visualizing skeleton, but this is not ideal because it has fixed width and color.  
 Alternatively here, we can render the skeleton using BILD format in ChimeraX. This allows us to set the skeleton sizes, node sizes and color.
-- `skeleton_colors`: a list of colors to render. Typically two colors are needed in order to differentiate current and next frames.\
+- `skeleton_colors`: a list of colors to render. Typically two colors are needed in order to differentiate current and next frames.  
 We use blue for current frame and red for next frame.
 - `skeleton_size`: diameter of the cynlinder that connects nodes. Default to 0.2.
-- `node_size`: diameter of the spheres that make up the nodes. \
+- `node_size`: diameter of the spheres that make up the nodes.  
 If `node_size`= `skeleton_size`, the nodes are not obvious (but needed to fill the holes between skeletons). Default to 0.2.
 ```
 tracking_visualization.generate_chimerax_skeleton()
