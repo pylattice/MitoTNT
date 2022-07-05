@@ -1,9 +1,9 @@
 # Detect Remodeling Events
 **In this section we will detect nodes that undergo fusion or fission events based on the tracking results.**
 
-This is done using a sliding-window approach to identify nodes that undergo persistent structural changes as opposed to transient segmentation differences.\
-First, the fragment indices for each node are recorded for the half_win_size frames before and after the current frame, to form the fragment list.\
-Second, for each network edge, the fragment lists for the connected nodes are compared.\
+This is done using a sliding-window approach to identify nodes that undergo persistent structural changes as opposed to transient segmentation differences.  
+First, the fragment indices for each node are recorded for the half_win_size frames before and after the current frame, to form the fragment list.  
+Second, for each network edge, the fragment lists for the connected nodes are compared.  
 Finally, Fission will be declared if the fragment lists before the current frame are strictly identical, as well as the fragment lists after the current frame are strictly non-overlapping. 
 Since fusion events can be considered as fission events reversed in time, the opposite criterion is used for fusion detection. 
 
@@ -17,7 +17,7 @@ To detect remodeling events:
 detect_fusion_fission.detect()
 ```
 
-The remodeling events are saved under `tracking_output/remodeling_events.csv`\
+The remodeling events are saved under `tracking_output/remodeling_events.csv`  
 Multiple remodeling nodes located in proximity (less than 5 edges away) are grouped into a single fission/fusion site.
 Columns in the output:
 - `type`: fusion or fission
