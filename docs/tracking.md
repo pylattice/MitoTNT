@@ -40,9 +40,9 @@ Each column is an attribute of the given node, described below.
 
 ## 4. Evaluate output
 
-The final node trajectories are saved in final_node_tracks.csv file.\
-Each row is one node at one time point. \
-Each column is an attribute of the given node, described below.\
+The final node trajectories are saved in final_node_tracks.csv file.  
+Each row is one node at one time point.  
+Each column is an attribute of the given node, described below.  
 
 ### Columns
 - `frame_id`: frame number of the node.
