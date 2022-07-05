@@ -11,6 +11,7 @@ Each 3D image stack needs to be placed in its own folder. This can be easily don
 
 Example directory structure:
 - frame_0/frame_0.tif
+
 - frame_1/frame_1.tif  
   ......
  
