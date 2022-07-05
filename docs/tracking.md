@@ -20,6 +20,10 @@ After specifying the folders, we need to set a few parameters:
 
 All processed inputs will be saved as a single compressed `.npz` file in `input_dir`.
 
+To start making inputs:
+```
+generate_tracking_inputs.generate()
+```
 
 ## 2. Frame-to-frame tracking
 **In this section we will perform node assignments for each consecutive frames.**
@@ -33,6 +37,11 @@ Additional parameters needed for frame-to-frame tracking:
 - `graph_matching_depth`: the maximum level used for graph comparison. Default to 2 (usually sufficient).
 
 - `dist_exponent`, `top_exponent`: the final cost term is given by D<sup>dist_exponent</sup> x T<sup>top_exponent</sup>, where D, T are the distance and topology costs respectively. Default both to 1 (equal weighting).
+
+To run tracking:
+```
+network_tracking.frametoframe_tracking()
+```
 
 ## 3. Gap closing
 **In this section we attempt to merge tracks that are mistakenly terminated during frame-to-frame tracking.**
@@ -48,6 +57,11 @@ Additional parameters need to be set:
 The final node trajectories are saved in `final_node_tracks.csv` file.
 Each row is one node at one time point. 
 Each column is an attribute of the given node, described below.
+
+To use gap closing:
+```
+network_tracking.gap_closing()
+```
 
 ## 4. Evaluate output
 
