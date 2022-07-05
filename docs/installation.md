@@ -2,9 +2,9 @@
 
 Software requirements:
 
-- **MitoGraph** for mitochondria segmentation
+- **[MitoGraph](https://github.com/vianamp/MitoGraph/)** for mitochondria segmentation
 
-- **ChimeraX** for tracking visualization
+- **[ChimeraX](https://www.cgl.ucsf.edu/chimerax/)** for tracking visualization
 
 The following python packages are needed:
 
