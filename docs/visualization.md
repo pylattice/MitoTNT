@@ -4,6 +4,7 @@
 **Please first download [ChimeraX](https://www.cgl.ucsf.edu/chimerax/)**
 
 We need to specify the directory to save visualization files
+
 - `vis_dir`: store `.cxc` commands to load in ChimeraX. You can use `work_dir/chimerax_visualization/` for example.
 
 - `vis_data_dir`: store `.cmap ` and `.bild` files created for each frame and used for visualization. You can use `vis_dir/data/` for example.
@@ -11,6 +12,7 @@ We need to specify the directory to save visualization files
 ## 1. Transform .tif to match MitoGraph coordinates (optional)
 Because MitoGraph does coordinate transformation, original `.tif` files need to be transformed.  
 This is only needed if you want to show fluorescence cloud when visualizing tracking.
+
 ```
 tracking_visualization.generate_transformed_tif(data_dir, vis_dir, vis_data_dir,
                                                 start_frame, end_frame)
@@ -33,6 +35,7 @@ tracking_visualization.generate_chimerax_skeleton()
 
 ## 3. Create ChimeraX rendering of tracking vectors
 We will use the frame-to-frame node assignments to draw the tracking vectors for two frames.
+
 - `arrow_color`: color of the tracking arrows. Default to black.
 
 - `arrow_size`: diameter of the arrow head. Default to 0.3.
@@ -43,6 +46,7 @@ tracking_visualization.generate_tracking_arrows()
 
 ## 4. Visualize network tracking in ChimeraX
 Now we can combine the visualization files created above to visualize the tracking of timeseries data
+
 - `show_tif`: if true include fluorescence cloud in background
 
 - `use_chimerax_skeleton`: # if true use BILD format skeleton which is more flexible but slower to load, if false use mitograph-generated .vtk files of fixed color and size
