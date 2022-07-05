@@ -1,17 +1,19 @@
 # Installation
 
 Software requirements:
-* **MitoGraph** for mitochondria segmentation
 
-* **ChimeraX** for tracking visualization
+- **MitoGraph** for mitochondria segmentation
+
+- **ChimeraX** for tracking visualization
 
 The following python packages are needed:
-* **numpy**
 
-* **scipy**
+- **numpy**
 
-* **pandas**
+- **scipy**
 
-* **python-igraph**
+- **pandas**
 
-* **fastdist**
+- **python-igraph**
+
+- **fastdist**
