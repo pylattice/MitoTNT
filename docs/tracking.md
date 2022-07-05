@@ -5,8 +5,10 @@
 **In this section we will process the raw data into a format that is used for the subsequent tracking.**
 
 First specify the directories we will use:
-- `work_dir`: the directory where data will be processed and stored. For test data, you can use the directory of `test_data` on your machine
+-`work_dir`: the directory where data will be processed and stored. For test data, you can use the directory of `test_data` on your machine
+
 - `data_dir`: the directory where MitoGraph segmented mitochondria is stored. For test data, this is `test_data/mitograph`.
+
 - `input_dir`: the directory where the processed inputs used for tracking will be stored. For test data, you can use `test_data/tracking_input`. This is an empty folder that will be created.
 
 After specifying the folders, we need to set a few parameters:
