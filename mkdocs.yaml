@@ -1,4 +1,5 @@
 site_name: MitoTNT
+
 nav:
     - 'Home': 'index.md'
     - 'Installation': '1_installation.md'
@@ -7,10 +8,16 @@ nav:
     - 'Visualization': '4_visualization.md'
     - 'Detect fusion/fission': '5_detect_remodeling.md'
     - 'Post-tracking analysis': '6_post_analysis.md'
+
 theme:
     name: material
+    palette:
+        primary: red
+        accent: orange
+        
 plugins:
     - mkdocs-video
+    
 markdown_extensions:
   - attr_list
   - pymdownx.emoji:
