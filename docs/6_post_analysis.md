@@ -14,10 +14,12 @@ Information needed for computing MSD vs. time delay curve:
 
 - `max_tau`: maximum number of frames/datapoints used for linear regression. Default to 5.
 
-The diffusision coeffients can be computed for 1) nodes, 2) segments, 3) fragments, in the order of lower amount of details.  
+The diffusision coeffients can be computed for 1) nodes, 2) segments, 3) fragments, in the order of higher level of coarse graining.  
 To compute diffusivity, use:
 ```
 post_analysis.compute_node_diffusivity()
+
 post_analysis.compute_segment_diffusivity()
+
 post_analysis.compute_fragment_diffusivity()
 ```
