@@ -6,6 +6,7 @@ nav:
     - 'Tracking': '3_tracking.md'
     - 'Visualization': '4_visualization.md'
     - 'Detect fusion/fission': '5_detect_remodeling.md'
+    - 'Post-tracking analysis': '6_post_analysis.md'
 theme:
     name: readthedocs
     highlightjs: true
