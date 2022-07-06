@@ -12,8 +12,8 @@ nav:
 theme:
     name: material
     palette:
-        primary: red
-        accent: orange
+        primary: orange
+        accent: red
         
 plugins:
     - mkdocs-video
