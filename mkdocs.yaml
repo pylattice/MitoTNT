@@ -9,3 +9,5 @@ nav:
     - 'Post-tracking analysis': '6_post_analysis.md'
 theme:
     name: material
+plugins:
+    - mkdocs-video
