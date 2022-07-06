@@ -8,7 +8,4 @@ nav:
     - 'Detect fusion/fission': '5_detect_remodeling.md'
     - 'Post-tracking analysis': '6_post_analysis.md'
 theme:
-    name: readthedocs
-    highlightjs: true
-    hljs_languages:
-        - python
+    name: material
