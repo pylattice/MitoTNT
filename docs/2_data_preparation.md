@@ -16,12 +16,12 @@ Example directory structure:
   ......
  
 ## 3. Run mitochondria segmentation
-To run MitoGraph on **command line**:  
-`MitoGraph -xy lateral_pixel_size -z axial_pixel_size -adaptive 10 -path tif_dir`  
-if adaptive thresholding is desired
+To run MitoGraph on **command line** for one snapshot:  
+`MitoGraph -xy lateral_pixel_size -z axial_pixel_size -path tif_dir`  
+Note: you need to replace `lateral_pixel_size` and `axial_pixel_size` with microscope parameters, otherwise the segmentation is empty
 
 To segment multiple z-stacks for a range of timepoints simultaneously:  
-`for frame in frame*; do -xy lateral_pixel_size -z axial_pixel_size -adaptive 10 -path "$frame"; done`
+`for frame in frame*; do MitoGraph -xy lateral_pixel_size -z axial_pixel_size -path "$frame"; done`
 
 Segmentation outputs will be saved under each timepoint folder.
 
