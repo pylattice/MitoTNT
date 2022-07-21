@@ -1,5 +1,5 @@
 # Installation
-On github, download this repository.  
+On github, download this [repository](https://github.com/pylattice/mitoTNT).  
 
 Or clone the repository on terminal:  
 `git clone https://github.com/pylattice/mitoTNT.git`  
