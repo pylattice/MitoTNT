@@ -5,16 +5,21 @@ It is built upon mitochondria segmentation provided by MitoGraph, and visualizat
 
 MitoTNT is written by Zichen (Zachary) Wang (ziw056@ucsd.edu), with the help from people in the [Johannes Schöneberg lab](https://www.schoeneberglab.org/) at UCSD.
 
+![type:video](./contents/home_page_movie.mp4)
 # Installation
+On github, download this repository.  
 
-Software requirements:
+Or clone the repository on terminal:  
+`git clone https://github.com/pylattice/mitoTNT.git`  
+
+### Software requirements
 - **[Jupyter Notebook](https://jupyter.org/)** or get it from **[Anaconda](https://www.anaconda.com/products/distribution)**
 
 - **[MitoGraph](https://github.com/vianamp/MitoGraph/)** for mitochondria segmentation
 
 - **[ChimeraX](https://www.cgl.ucsf.edu/chimerax/)** for tracking visualization
 
-The following python packages are needed:
+### Python dependencies
 
 - **numpy**
 
