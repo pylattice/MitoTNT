@@ -20,6 +20,7 @@ The following python packages are needed:
 - **fastdist**
 
 To install all packages, open command line and go to the root directory of MitoTNT:  
+
 ``
 pip install -r python_dependencies.txt
 ``
