@@ -14,9 +14,8 @@ theme:
     palette:
         primary: orange
         accent: red
-    icon:
-        logo: :boom:
-    favicon: :boom:
+    logo: contents/logo.png
+    favicon: contents/logo.png
     
 plugins:
     - mkdocs-video
