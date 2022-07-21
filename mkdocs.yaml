@@ -14,7 +14,9 @@ theme:
     palette:
         primary: orange
         accent: red
-    logo: docs/contents/fire_logo.png
+    icon:
+        logo: :boom:
+    favicon: :boom:
     
 plugins:
     - mkdocs-video
