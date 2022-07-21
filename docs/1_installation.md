@@ -1,4 +1,8 @@
 # Installation
+On github, download this repository.  
+
+Or clone the repository on terminal:  
+git clone https://github.com/pylattice/mitoTNT.git  
 
 Software requirements:
 - **[Jupyter Notebook](https://jupyter.org/)** or get it from **[Anaconda](https://www.anaconda.com/products/distribution)**
