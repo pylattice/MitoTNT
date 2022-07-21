@@ -12,8 +12,6 @@ We need to specify the directory for save post analysis results:
 
 Information needed for computing MSD vs. time delay curve:
 
-- `frame_interval`: frame interval for the data in seconds.
-
 - `max_tau`: maximum number of frames/datapoints used for linear regression. Default to 5.
 
 Additional information for computing segment and fragment level diffusivity:
@@ -33,7 +31,7 @@ post_analysis.compute_segment_diffusivity()
 post_analysis.compute_fragment_diffusivity()
 ```
 
-The data is saved in `*diffusivity.csv` files. Each row is a node/segment/fragment. The columns are explained below.
+The data is saved in `analy_motility_dir/*diffusivity.csv` files. Each row is a node/segment/fragment. The columns are explained below.
 ### Columns
 
  - `center_frame_id`: selected frame for determining the segment/fragment diffusivity. N/A for node diffusivity.
