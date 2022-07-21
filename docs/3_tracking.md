@@ -1,5 +1,6 @@
 # Network Tracking
-**Now open `tracking_pipeline.ipynb` for mitochondrial network tracking.**
+Open the terminal and type `jupyter notebook` to start Jupyter Notebook.  
+Find the root directory of MitoTNT and open `tracking_pipeline.ipynb` for mitochondrial network tracking.
 
 ## 1. Generate inputs for tracking
 **In this section we will process the raw data into a format that is used for the subsequent tracking.**
