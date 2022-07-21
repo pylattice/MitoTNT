@@ -39,7 +39,7 @@ tracking_visualization.generate_tracking_arrows()
 ```
 
 ## 4. Visualize network tracking in ChimeraX
-Now we can combine the visualization files created above to visualize the tracking of timeseries data
+Now we can combine the visualization files created above to visualize the tracking of timeseries data.
 
 - `show_tif`: if true include fluorescence cloud in background
 
@@ -47,3 +47,4 @@ Now we can combine the visualization files created above to visualize the tracki
 ```
 tracking_visualization.visualize_tracking()
 ```
+**Open chimerax_visualization/visualize_tracking.cxc in ChimeraX. This may take some time. Click Home -> Backgound -> White to see it better.**

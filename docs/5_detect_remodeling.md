@@ -2,10 +2,13 @@
 **In this section we will detect nodes that undergo fusion or fission events based on the tracking results.**
 
 This is done using a sliding-window approach to identify nodes that undergo persistent structural changes as opposed to transient segmentation differences.  
-First, the fragment indices for each node are recorded for the half_win_size frames before and after the current frame, to form the fragment list.  
+First, the fragment indices for each node are recorded for the `half_win_size frames` before and after the current frame, to form the fragment list.  
 Second, for each network edge, the fragment lists for the connected nodes are compared.  
 Finally, Fission will be declared if the fragment lists before the current frame are strictly identical, as well as the fragment lists after the current frame are strictly non-overlapping. 
 Since fusion events can be considered as fission events reversed in time, the opposite criterion is used for fusion detection. 
+
+Note because of the sliding window approach:  
+`start_frame` must be >= `half_win_size` and `end_frame` must be <= total number of frames - `half_win_size`
 
 Please specify:
 
