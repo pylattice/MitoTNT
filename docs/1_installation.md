@@ -1,7 +1,7 @@
 # Installation
 
 Software requirements:
-- **[Jupyter Notebook](https://jupyter.org/)** or get from **[Anaconda](https://www.anaconda.com/products/distribution)**
+- **[Jupyter Notebook](https://jupyter.org/)** or get it from **[Anaconda](https://www.anaconda.com/products/distribution)**
 
 - **[MitoGraph](https://github.com/vianamp/MitoGraph/)** for mitochondria segmentation
 
@@ -19,7 +19,7 @@ The following python packages are needed:
 
 - **fastdist**
 
-To install all packages, open command line and do:  
+To install all packages, open command line and go to the root directory of MitoTNT:  
 ``
 pip install -r python_dependencies.txt
 ``
