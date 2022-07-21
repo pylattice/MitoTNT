@@ -7,6 +7,9 @@ Second, for each network edge, the fragment lists for the connected nodes are co
 Finally, Fission will be declared if the fragment lists before the current frame are strictly identical, as well as the fragment lists after the current frame are strictly non-overlapping. 
 Since fusion events can be considered as fission events reversed in time, the opposite criterion is used for fusion detection. 
 
+Note because of the sliding window approach:  
+`start_frame` must be >= `half_win_size` and `end_frame` must be <= total number of frames - `half_win_size`
+
 Please specify:
 
 - `stride_size`: step size for sliding the window in number of frames. Default to 1 (to detect events happening in every frame).
