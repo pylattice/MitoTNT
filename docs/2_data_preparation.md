@@ -1,5 +1,6 @@
 # Data Preparation
 **To perform tracking, mitochondria 3D image stacks needs to be segmented using MitoGraph for all time points.**
+Example dataset has been provided under `test_data/mitograph`, which are MitoGraph-segmented. You can skip this section if using the example dataset.
 
 ## 1. Install MitoGraph
 MitoGraph can be installed [here](https://github.com/vianamp/MitoGraph/#how-to-install)
