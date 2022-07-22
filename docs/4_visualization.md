@@ -10,8 +10,12 @@ We need to specify the directory to save visualization files
 - `vis_data_dir`: store `.cmap ` and `.bild` files created for each frame and used for visualization. You can use `vis_dir/data/` for example.
 
 ## 1. Transform .tif to match MitoGraph coordinates (optional)
-Because MitoGraph does coordinate transformation, original `.tif` files need to be transformed.  
+Because MitoGraph does coordinate transformation, original `.tif` files need to be transformed.
 This is only needed if you want to show fluorescence cloud when visualizing tracking.
+
+- `voxel_size`: provide the voxel_size same as inputs for MitoGraph segmentation, in the format of 'x_size y_size z_size'.  
+For example, `voxel_size='0.2 0.2 0.4'` refers to lateral pixel size 0.2 μm and axial pixel size 0.4 μm.
+
 ```
 tracking_visualization.generate_transformed_tif()
 ```
