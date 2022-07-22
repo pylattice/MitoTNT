@@ -35,9 +35,9 @@ def generate_transformed_tif(data_dir, vis_dir, vis_data_dir,
 
         fid = str(frame)
         commands.append('close\n')
-        commands.append('open \"'+data_dir+'FRAME_'+fid+'/FRAME_'+fid+'.tif\"\n')
+        commands.append('open \"'+data_dir+'frame_'+fid+'/frame_'+fid+'.tif\"\n')
         commands.append('volume flip #1 axis y\n')
-        commands.append('save \"'+vis_data_dir+'FRAME_'+fid+'_yflip.cmap\" #2\n')
+        commands.append('save \"'+vis_data_dir+'frame_'+fid+'_yflip.cmap\" #2\n')
 
     script.writelines(commands)
     script.close()
@@ -58,7 +58,7 @@ def generate_chimerax_skeleton(input_dir, vis_dir, vis_data_dir,
         for frame in trange(start_frame, end_frame):
 
             fid = str(frame)
-            file_dir = vis_data_dir+'FRAME_'+fid+'_chimerax_skeleton_'+color+'.bild'
+            file_dir = vis_data_dir+'frame_'+fid+'_chimerax_skeleton_'+color+'.bild'
             if os.path.exists(file_dir):
                 os.remove(file_dir)
             bild = open(file_dir, 'x')
@@ -96,7 +96,7 @@ def generate_tracking_arrows(input_dir, output_dir, vis_data_dir,
         arrows = []
         arrows.append('.color '+arrow_color+'\n')
 
-        file_dir = vis_data_dir+'FRAME_'+str(frame)+'_arrows.bild'
+        file_dir = vis_data_dir+'frame_'+str(frame)+'_arrows.bild'
         if os.path.exists(file_dir):
             os.remove(file_dir)
         bild = open(file_dir, "x")
@@ -118,8 +118,8 @@ def generate_tracking_arrows(input_dir, output_dir, vis_data_dir,
 
                 disp = end_coord - start_coord
                 disp_unit = disp / np.linalg.norm(disp)
-                start_coord = start_coord + 0.15 * disp_unit
-                end_coord = end_coord - 0.15 * disp_unit
+                start_coord = start_coord + 0.02 * disp_unit # small offset to
+                end_coord = end_coord - 0.02 * disp_unit
 
                 arrows.append('.arrow '+coord_to_str(start_coord)+coord_to_str(end_coord)+str(arrow_size/2)+' '+str(arrow_size)+' 0.6\n')
 
@@ -150,23 +150,23 @@ def visualize_tracking(data_dir, input_dir, vis_dir, vis_data_dir,
         frame_n = str(frame+1)
 
         # load arrow
-        commands.append('open \"'+vis_data_dir+'FRAME_'+frame_m+'_arrows.bild\"\n')
+        commands.append('open \"'+vis_data_dir+'frame_'+frame_m+'_arrows.bild\"\n')
 
         if use_chimerax_skeleton:
             # load chimerax skeleton
-            commands.append('open \"'+vis_data_dir+'FRAME_'+frame_m+'_chimerax_skeleton_'+skeleton_colors[0]+'.bild\"'+'\n')
-            commands.append('open \"'+vis_data_dir+'FRAME_'+frame_n+'_chimerax_skeleton_'+skeleton_colors[1]+'.bild\"'+'\n')
+            commands.append('open \"'+vis_data_dir+'frame_'+frame_m+'_chimerax_skeleton_'+skeleton_colors[0]+'.bild\"'+'\n')
+            commands.append('open \"'+vis_data_dir+'frame_'+frame_n+'_chimerax_skeleton_'+skeleton_colors[1]+'.bild\"'+'\n')
         else:
             # load mitograph skeleton
-            commands.append('open \"'+data_dir+'FRAME_'+frame_m+'/FRAME_'+frame_m+'_skeleton.vtk\"\n')
-            commands.append('open \"'+data_dir+'FRAME_'+frame_n+'/FRAME_'+frame_n+'_skeleton.vtk\"\n')
+            commands.append('open \"'+data_dir+'frame_'+frame_m+'/frame_'+frame_m+'_skeleton.vtk\"\n')
+            commands.append('open \"'+data_dir+'frame_'+frame_n+'/frame_'+frame_n+'_skeleton.vtk\"\n')
 
         # load tif
         if show_tif:
-            commands.append('open \"'+vis_data_dir+'FRAME_'+frame_m+'_yflip.cmap\"\n')
-            commands.append('volume #'+str(idx+3)+' color #24cbda style image level 0,0.0 level 800,0.75 level 3000,0.95\n')
-            commands.append('open \"'+vis_data_dir+'FRAME_'+frame_n+'_yflip.cmap\"\n')
-            commands.append('volume #'+str(idx+4)+' color #ff5015 style image level 0,0.0 level 800,0.75 level 3000,0.95\n')
+            commands.append('open \"'+vis_data_dir+'frame_'+frame_m+'_yflip.cmap\"\n')
+            commands.append('volume #'+str(idx+3)+' color '+skeleton_colors[0]+'\n')
+            commands.append('open \"'+vis_data_dir+'frame_'+frame_n+'_yflip.cmap\"\n')
+            commands.append('volume #'+str(idx+4)+' color '+skeleton_colors[1]+'\n')
 
         # combine the models
         if show_tif:
