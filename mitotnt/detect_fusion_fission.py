@@ -90,7 +90,7 @@ def detect(input_dir, output_dir,
     event_list = []
     node_list = []
 
-    print('Initate fusion and fission event detection ...')
+    print('Performing fusion and fission event detection ...')
     for current_frame in trange(start_frame, end_frame, stride_size):
 
         frame_tracks = tracks[tracks['frame_id']==current_frame]

@@ -108,7 +108,7 @@ def generate(data_dir, input_dir,
     all_full_graphs = []
     all_segment_nodes = []
 
-    for frame in trange(start_frame, end_frame, desc='Full-resolution graphs in progress'):
+    for frame in trange(start_frame, end_frame+1, desc='Full-resolution graphs in progress'):
         full_graph = ig.Graph()
 
         raw_coords = np.loadtxt(data_dir+'frame_'+str(frame)+'/frame_'+str(frame)+'.coo')
@@ -192,7 +192,7 @@ def generate(data_dir, input_dir,
 
     ### use full-resolution graphs to obtain classic graphs around each node ###
     all_contracted_graphs = []
-    for frame in trange(start_frame, end_frame, desc='Classic graphs in progress'):
+    for frame in trange(start_frame, end_frame+1, desc='Classic graphs in progress'):
 
         # load graphs of nodes and edges
         full_graph = all_full_graphs[frame]

@@ -179,7 +179,7 @@ def list_to_str(list1):
 # =============================================================================
 
 def frametoframe_tracking(input_dir, output_dir, start_frame, end_frame, frame_interval, tracking_interval=1,
-                          distance_cutoff_mode='neighbor', cutoff_num_neighbor=10, cutoff_speed=1,
+                          cutoff_num_neighbor=10, use_speed_cutoff=False, cutoff_speed=1,
                           graph_matching_depth=2, dist_exponent=1, top_exponent=1):
 
     print('Data loading ...\n')
@@ -195,7 +195,7 @@ def frametoframe_tracking(input_dir, output_dir, start_frame, end_frame, frame_i
 
     # declare useful data holders
     previous_costs = []
-    for frame in trange(start_frame, end_frame-tracking_interval, tracking_interval, desc='Tracking in progress'):
+    for frame in trange(start_frame, end_frame, tracking_interval, desc='Tracking in progress'):
 
         start = time.time()
         print('\nStart tracking frame {} and {} ...'.format(frame, frame+tracking_interval))
@@ -259,15 +259,13 @@ def frametoframe_tracking(input_dir, output_dir, start_frame, end_frame, frame_i
             dist_cutoff = np.inf
             row = dist_cost_mat[i,:]
 
-            if distance_cutoff_mode == 'speed':
-                dist_cutoff = cutoff_speed * frame_interval # fixed distance cutoff of default 1 um/s * frame interval (s)
+            neighbor_cutoff = sorted(row)[cutoff_num_neighbor]
 
-            elif distance_cutoff_mode == 'neighbor':
-                dist_cutoff = sorted(row)[cutoff_num_neighbor]
+            speed_cutoff = np.inf
+            if use_speed_cutoff == True:
+                speed_cutoff = cutoff_speed * frame_interval # add fixed distance cutoff of default 1 um/s * frame interval (s)
 
-            else:
-                raise Exception('Either cutoff speed or cutoff number of neighbors needs to be provided')
-
+            dist_cutoff = np.min([neighbor_cutoff, speed_cutoff])
             row[row > dist_cutoff] = np.nan
             dist_cost_mat[i,:] = row
 
@@ -438,16 +436,18 @@ def frametoframe_tracking(input_dir, output_dir, start_frame, end_frame, frame_i
                 initiated.append(i)
 
         linked = np.array(linked); terminated = np.array(terminated); initiated = np.array(initiated)
-
-        # store the assignments
         linked_nodes.append(linked); terminated_nodes.append(terminated); initiated_nodes.append(initiated)
 
-        # output stats
+        assignment_dist = [dist_cost_mat[a,b] for (a,b) in linked]
+        previous_costs += list(cost_matrix[np.arange(number_m), assignment[:number_m]])
         avg_cost = cost_matrix[np.arange(number_m),assignment[:number_m]].sum() / number_m
         end = time.time()
+
+        # output stats
         print('Number of nodes at frame {}, {} are {}, {}'.format(frame, frame+tracking_interval, number_m, number_n))
         print('Number of nodes linked, terminated at frame {}: {}, {}'.format(frame, len(linked), len(terminated)))
         print('Number of nodes initiated at frame {}: {}'.format(frame+tracking_interval, len(initiated)))
+        print('Mean, std of distances for tracked nodes: {:2f}, {:2f}'.format(np.mean(assignment_dist), np.std(assignment_dist)))
         print('Average cost: {:.1f}'.format(avg_cost))
         print('Tracking is complete and takes {:.2f} s\n'.format(end - start))
         ### Assignments reported ###
@@ -496,14 +496,13 @@ def frametoframe_tracking(input_dir, output_dir, start_frame, end_frame, frame_i
                                    [intensity_n[init_node]],
                                    [width_n[init_node]]])
 
-        # record the assignment costs
-        previous_costs += list(cost_matrix[np.arange(number_m),assignment[:number_m]])
-
     ### Save frame-to-frame tracking ###
-    suffix = ''
-    np.save(output_dir+'linked_nodes_each_frame'+suffix+'.npy', np.array(linked_nodes, dtype=object))
-    np.save(output_dir+'terminated_nodes_each_frame'+suffix+'.npy', np.array(terminated_nodes, dtype=object))
-    np.save(output_dir+'initiated_nodes_each_frame'+suffix+'.npy', np.array(initiated_nodes, dtype=object))
+    path = output_dir+'frametoframe_tracking_outputs.npz'
+    data = {}
+    data['linked_nodes'] = np.array(linked_nodes, dtype=object)
+    data['terminated_nodes'] = np.array(terminated_nodes, dtype=object)
+    data['initiated_nodes'] = np.array(initiated_nodes, dtype=object)
+    np.savez(path, **data)
 
     # each element in all_tracks is a track with 1) frame numbers; 2) node indices; 3) segment ids of the node, 4) frag ids of the node; 4) node coords; 5) node intensities; 6) node widths
     terminated_tracks = np.array(terminated_tracks, dtype=object)

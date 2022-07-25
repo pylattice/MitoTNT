@@ -4,50 +4,44 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from tqdm.notebook import trange
 
-def coord_to_str(coord):
-    string = ''
-    for s in coord:
-        string = string + str(np.around(s,3)) + ' '
-    return string
-
 def time_to_rgb(time, cmap):
     cmap = plt.get_cmap(cmap)
     color = cmap(time)
     return str(color[0])+' '+str(color[1])+' '+str(color[2])
 
-
 def coord_to_str(coord):
     string = ''
     for s in coord:
-        string = string + str(np.around(s,3)) + ' '
+        string = string + str(np.round(s,3)) + ' '
     return string
 
 def generate_transformed_tif(data_dir, vis_dir, vis_data_dir,
-                             start_frame, end_frame):
+                             start_frame, end_frame, voxel_size):
 
-    file_dir = vis_dir+'generate_yfliped_tif.cxc'
+    file_dir = vis_dir+'generate_transformed_tif.cxc'
     if os.path.exists(file_dir):
         os.remove(file_dir)
     script = open(file_dir, 'x')
     commands = []
 
-    for frame in range(start_frame, end_frame):
+    for frame in range(start_frame, end_frame+1):
 
         fid = str(frame)
         commands.append('close\n')
         commands.append('open \"'+data_dir+'frame_'+fid+'/frame_'+fid+'.tif\"\n')
+        commands.append('volume #1 voxelSize '+voxel_size+'\n')
         commands.append('volume flip #1 axis y\n')
         commands.append('save \"'+vis_data_dir+'frame_'+fid+'_yflip.cmap\" #2\n')
 
     script.writelines(commands)
     script.close()
-    print('Load file', file_dir, '\nin ChimeraX to generate flipped tif files for proper visualization')
+    print('Load file', file_dir, '\nin ChimeraX to generate transformed tif files for proper visualization')
 
 
 skeleton_colors = ['b','r']
 def generate_chimerax_skeleton(input_dir, vis_dir, vis_data_dir,
                                start_frame, end_frame,
-                               skeleton_colors, skeleton_size=0.2, node_size=0.2):
+                               skeleton_colors, skeleton_size=0.02, node_size=0.02):
 
     inputs = np.load(input_dir+'tracking_inputs.npz', allow_pickle=True)
     full_graph_all_frames = inputs['full_graphs']
@@ -55,7 +49,7 @@ def generate_chimerax_skeleton(input_dir, vis_dir, vis_data_dir,
     print('Generate network skeleton in BILD format ...')
     for color in skeleton_colors:
         print('Color', color)
-        for frame in trange(start_frame, end_frame):
+        for frame in trange(start_frame, end_frame+1):
 
             fid = str(frame)
             file_dir = vis_data_dir+'frame_'+fid+'_chimerax_skeleton_'+color+'.bild'
@@ -83,16 +77,16 @@ def generate_chimerax_skeleton(input_dir, vis_dir, vis_data_dir,
 
 def generate_tracking_arrows(input_dir, output_dir, vis_data_dir,
                              start_frame, end_frame,
-                             arrow_color='black', arrow_size=0.3):
+                             arrow_color='black', arrow_size=0.03):
 
     inputs = np.load(input_dir+'tracking_inputs.npz', allow_pickle=True)
     full_graph_all_frames = inputs['full_graphs']
 
-    suffix = ''
-    linked_nodes = np.load(output_dir+'linked_nodes_each_frame'+suffix+'.npy', allow_pickle=True)
+    outputs = np.load(output_dir+'frametoframe_tracking_outputs.npz', allow_pickle=True)
+    linked_nodes = outputs['linked_nodes']
 
     print('Generate tracking arrows in BILD format ...')
-    for index, frame in enumerate(trange(start_frame, end_frame-1)):
+    for index, frame in enumerate(trange(start_frame, end_frame)):
         arrows = []
         arrows.append('.color '+arrow_color+'\n')
 
@@ -128,10 +122,10 @@ def generate_tracking_arrows(input_dir, output_dir, vis_data_dir,
 
         except:
             bild.close()
+
     print('Done')
 
-show_tif = True
-use_chimerax_skeleton = True
+
 def visualize_tracking(data_dir, input_dir, vis_dir, vis_data_dir,
                        start_frame, end_frame,
                        skeleton_colors, show_tif, use_chimerax_skeleton):
@@ -144,7 +138,7 @@ def visualize_tracking(data_dir, input_dir, vis_dir, vis_data_dir,
 
     idx = 1
     commands.append('close\n')
-    for frame in range(start_frame, end_frame-1):
+    for frame in range(start_frame, end_frame):
 
         frame_m = str(frame)
         frame_n = str(frame+1)
@@ -164,9 +158,9 @@ def visualize_tracking(data_dir, input_dir, vis_dir, vis_data_dir,
         # load tif
         if show_tif:
             commands.append('open \"'+vis_data_dir+'frame_'+frame_m+'_yflip.cmap\"\n')
-            commands.append('volume #'+str(idx+3)+' color '+skeleton_colors[0]+'\n')
+            commands.append('volume #'+str(idx+3)+' color '+skeleton_colors[0]+' style image\n')
             commands.append('open \"'+vis_data_dir+'frame_'+frame_n+'_yflip.cmap\"\n')
-            commands.append('volume #'+str(idx+4)+' color '+skeleton_colors[1]+'\n')
+            commands.append('volume #'+str(idx+4)+' color '+skeleton_colors[1]+' style image\n')
 
         # combine the models
         if show_tif:

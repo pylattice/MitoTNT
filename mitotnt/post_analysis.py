@@ -7,8 +7,8 @@ import matplotlib.pyplot as plt
 from scipy.linalg import lstsq
 from tqdm.notebook import trange
 
-def compute_node_diffusivity(output_dir, analysis_dir, analy_motility_dir,
-                              frame_interval, max_tau):
+def compute_node_diffusivity(input_dir, output_dir, analy_motility_dir,
+                             frame_interval, max_tau):
 
     tracks = pd.read_csv(output_dir+'final_node_tracks.csv')
     num_tracks = int(np.max(tracks['unique_node_id'])) + 1
@@ -92,7 +92,7 @@ def compute_node_diffusivity(output_dir, analysis_dir, analy_motility_dir,
     print('Data saved at '+analy_motility_dir+'node_diffusivity.csv')
 
 
-def compute_segment_diffusivity(input_dir, output_dir, analysis_dir, analy_motility_dir,
+def compute_segment_diffusivity(input_dir, output_dir, analy_motility_dir,
                                 frame_interval, max_tau, tracked_ratio, half_win_size, selected_frames):
     # load inputs
     tracks = pd.read_csv(output_dir+'final_node_tracks.csv')
@@ -102,18 +102,18 @@ def compute_segment_diffusivity(input_dir, output_dir, analysis_dir, analy_motil
     seg_diffusivity = []
 
     # iterate the center frames
-    for mito_frame in selected_frames:
-        segment_nodes = segment_node_all_frames[mito_frame]
+    for center_frame in selected_frames:
+        segment_nodes = segment_node_all_frames[center_frame]
         num_segs = len(segment_nodes)
 
-        frame_tracks = tracks[tracks.frame_id==mito_frame] # find only tracks that intersects with the center frame
+        frame_tracks = tracks[tracks.frame_id==center_frame] # find only tracks that intersects with the center frame
         unique_nodes = np.array(frame_tracks['unique_node_id'].tolist(), dtype=int)
         frame_nodes = np.array(frame_tracks['frame_node_id'].tolist(), dtype=int)
         frame_to_unique = {frame_nodes[i]:unique_nodes[i] for i in range(len(frame_nodes))}
         unique_to_frame = {unique_nodes[i]:frame_nodes[i] for i in range(len(unique_nodes))}
 
         all_msd, all_tau = [], []
-        print('Computing MSD for tracks around frame', mito_frame, '...')
+        print('Computing MSD for tracks around frame', center_frame, '...')
         for seg_id in trange(len(segment_nodes)):
 
             segment = segment_nodes[seg_id]
@@ -127,7 +127,7 @@ def compute_segment_diffusivity(input_dir, output_dir, analysis_dir, analy_motil
                     for i in range(len(full_track)):
                         frame = int(full_track.iloc[i]['frame_id'])
                         coord = full_track.iloc[i]['x':'z'].to_numpy()
-                        arr_index = frame - (mito_frame - half_win_size)
+                        arr_index = frame - (center_frame - half_win_size)
 
                         if arr_index < 2*half_win_size and arr_index >= 0:
                             seg_coords[node_id,arr_index] = coord
@@ -167,7 +167,7 @@ def compute_segment_diffusivity(input_dir, output_dir, analysis_dir, analy_motil
             all_msd.append(seg_msd)
             all_tau.append(seg_tau)
 
-        print('Percent of segments tracked at frame', mito_frame, ':', (1 - np.sum([len(msd)==0 for msd in all_msd]) / len(all_msd)) * 100, '%\n')
+        print('Percent of segments tracked at frame', center_frame, ':', (1 - np.sum([len(msd)==0 for msd in all_msd]) / len(all_msd)) * 100, '%\n')
 
         # compute diffusivity from MSD
         num_msd = len(all_msd)
@@ -179,14 +179,14 @@ def compute_segment_diffusivity(input_dir, output_dir, analysis_dir, analy_motil
                 else:
                     msd_matrix[track_id,i] = np.nan
 
-        print('Fitting linear curve and computing diffusion coefficient at frame', mito_frame, '...')
+        print('Fitting linear curve and computing diffusion coefficient at frame', center_frame, '...')
         for seg_id in trange(num_segs):
             eata_msd = [msd for msd in msd_matrix[seg_id] if not np.isnan(msd)]
             eata_msd.insert(0,0)
 
             # choose the number of data points to fit
             if len(eata_msd) <= 1:
-                seg_diffusivity.append({'center_frame': mito_frame, 'seg_id':seg_id, 'diffusivity':np.nan, 'msd':np.nan, 'r_squared':np.nan, 'num_points':1})
+                seg_diffusivity.append({'center_frame': center_frame, 'seg_id':seg_id, 'diffusivity':np.nan, 'msd':np.nan, 'r_squared':np.nan, 'num_points':1})
                 continue
             elif len(eata_msd) > max_tau:
                 n_points = max_tau
@@ -207,7 +207,7 @@ def compute_segment_diffusivity(input_dir, output_dir, analysis_dir, analy_motil
             else:
                 r_squared = 1 - res/total_sum
 
-            seg_diffusivity.append({'center_frame': mito_frame, 'seg_id':seg_id, 'diffusivity':d, 'msd':msd_per_frame, 'r_squared':r_squared, 'num_points':n_points})
+            seg_diffusivity.append({'center_frame': center_frame, 'seg_id':seg_id, 'diffusivity':d, 'msd':msd_per_frame, 'r_squared':r_squared, 'num_points':n_points})
 
     seg_diffusivity = pd.DataFrame.from_dict(seg_diffusivity)
     seg_diffusivity.to_csv(analy_motility_dir+'segment_diffusivity.csv', index=False)
@@ -216,8 +216,8 @@ def compute_segment_diffusivity(input_dir, output_dir, analysis_dir, analy_motil
 
 
 
-def compute_fragment_diffusivity(input_dir, output_dir, analysis_dir, analy_motility_dir,
-                                frame_interval, max_tau, tracked_ratio, half_win_size, selected_frames):
+def compute_fragment_diffusivity(input_dir, output_dir, analy_motility_dir,
+                                 frame_interval, max_tau, tracked_ratio, half_win_size, selected_frames):
     # load inputs
     tracks = pd.read_csv(output_dir+'final_node_tracks.csv')
     inputs = np.load(input_dir+'tracking_inputs.npz', allow_pickle=True)
@@ -226,19 +226,19 @@ def compute_fragment_diffusivity(input_dir, output_dir, analysis_dir, analy_moti
     frag_diffusivity = []
 
     # iterate the center frames
-    for mito_frame in selected_frames:
-        graph = full_graph_all_frames[mito_frame]
+    for center_frame in selected_frames:
+        graph = full_graph_all_frames[center_frame]
         fragment_nodes = graph.components()
         num_frags = len(fragment_nodes)
 
-        frame_tracks = tracks[tracks.frame_id==mito_frame] # find only tracks that intersects with the center frame
+        frame_tracks = tracks[tracks.frame_id==center_frame] # find only tracks that intersects with the center frame
         unique_nodes = np.array(frame_tracks['unique_node_id'].tolist(), dtype=int)
         frame_nodes = np.array(frame_tracks['frame_node_id'].tolist(), dtype=int)
         frame_to_unique = {frame_nodes[i]:unique_nodes[i] for i in range(len(frame_nodes))}
         unique_to_frame = {unique_nodes[i]:frame_nodes[i] for i in range(len(unique_nodes))}
 
         all_msd, all_tau = [], []
-        print('Computing MSD for tracks around frame', mito_frame, '...')
+        print('Computing MSD for tracks around frame', center_frame, '...')
         for frag_id in trange(len(fragment_nodes)):
 
             fragment = fragment_nodes[frag_id]
@@ -252,7 +252,7 @@ def compute_fragment_diffusivity(input_dir, output_dir, analysis_dir, analy_moti
                     for i in range(len(full_track)):
                         frame = int(full_track.iloc[i]['frame_id'])
                         coord = full_track.iloc[i]['x':'z'].to_numpy()
-                        arr_index = frame - (mito_frame - half_win_size)
+                        arr_index = frame - (center_frame - half_win_size)
 
                         if arr_index < 2*half_win_size and arr_index >= 0:
                             frag_coords[node_id,arr_index] = coord
@@ -292,7 +292,7 @@ def compute_fragment_diffusivity(input_dir, output_dir, analysis_dir, analy_moti
             all_msd.append(frag_msd)
             all_tau.append(frag_tau)
 
-        print('Percent of fragments tracked at frame', mito_frame, ':', (1 - np.sum([len(msd)==0 for msd in all_msd]) / len(all_msd)) * 100, '%\n')
+        print('Percent of fragments tracked at frame', center_frame, ':', (1 - np.sum([len(msd)==0 for msd in all_msd]) / len(all_msd)) * 100, '%\n')
 
         # compute diffusivity from MSD
         num_msd = len(all_msd)
@@ -304,14 +304,14 @@ def compute_fragment_diffusivity(input_dir, output_dir, analysis_dir, analy_moti
                 else:
                     msd_matrix[track_id,i] = np.nan
 
-        print('Fitting linear curve and computing diffusion coefficient at frame', mito_frame, '...')
+        print('Fitting linear curve and computing diffusion coefficient at frame', center_frame, '...')
         for frag_id in trange(num_frags):
             eata_msd = [msd for msd in msd_matrix[frag_id] if not np.isnan(msd)]
             eata_msd.insert(0,0)
 
             # choose the number of data points to fit
             if len(eata_msd) <= 1:
-                frag_diffusivity.append({'center_frame': mito_frame, 'frag_id':frag_id, 'diffusivity':np.nan, 'msd':np.nan, 'r_squared':np.nan, 'num_points':1})
+                frag_diffusivity.append({'center_frame': center_frame, 'frag_id':frag_id, 'diffusivity':np.nan, 'msd':np.nan, 'r_squared':np.nan, 'num_points':1})
                 continue
             elif len(eata_msd) > max_tau:
                 n_points = max_tau
@@ -332,9 +332,84 @@ def compute_fragment_diffusivity(input_dir, output_dir, analysis_dir, analy_moti
             else:
                 r_squared = 1 - res/total_sum
 
-            frag_diffusivity.append({'center_frame_id': mito_frame, 'frag_id':frag_id, 'diffusivity':d, 'msd':msd_per_frame, 'r_squared':r_squared, 'num_points':n_points})
+            frag_diffusivity.append({'center_frame_id': center_frame, 'frag_id':frag_id, 'diffusivity':d, 'msd':msd_per_frame, 'r_squared':r_squared, 'num_points':n_points})
 
     frag_diffusivity = pd.DataFrame.from_dict(frag_diffusivity)
     frag_diffusivity.to_csv(analy_motility_dir+'fragment_diffusivity.csv', index=False)
 
     print('Data saved at '+analy_motility_dir+'fragment_diffusivity.csv')
+
+def coord_to_str(coord):
+    string = ''
+    for s in coord:
+        string = string + str(np.round(s,3)) + ' '
+    return string
+
+def color_motility(diffusivity):
+    if np.isnan(diffusivity):
+        return '1.0 1.0 1.0' # white
+    else:
+        cmap = plt.get_cmap('coolwarm')
+        color = cmap(diffusivity)
+    return str(color[0])+' '+str(color[1])+' '+str(color[2])
+
+def map_node_motility_onto_surface(input_dir, output_dir, analy_motility_dir,
+                                   selected_frames):
+
+    # load data
+    inputs = np.load(input_dir+'tracking_inputs.npz', allow_pickle=True)
+    full_graph_all_frames = inputs['full_graphs']
+
+    tracks = pd.read_csv(output_dir+'final_node_tracks.csv')
+
+    track_diffusivity_df = pd.read_csv(analy_motility_dir+'node_diffusivity.csv')
+
+    for center_frame in selected_frames:
+        graph = full_graph_all_frames[center_frame]
+        cc = graph.components()
+        num_nodes = len(graph.vs)
+
+        frame_diffusivity = np.empty(num_nodes)
+        frame_diffusivity[:] = np.nan
+
+        frame_tracks = tracks[tracks.frame_id==center_frame]
+        frame_track_ids = [int(n) for n in frame_tracks.unique_node_id.tolist()]
+        unique_nodes = np.array(frame_tracks['unique_node_id'].tolist(), dtype=int)
+        frame_nodes = np.array(frame_tracks['frame_node_id'].tolist(), dtype=int)
+        frame_to_unique = {frame_nodes[i]:unique_nodes[i] for i in range(len(frame_nodes))}
+        unique_to_frame = {unique_nodes[i]:frame_nodes[i] for i in range(len(unique_nodes))}
+
+        for track_id in frame_track_ids:
+
+            d = track_diffusivity_df.loc[track_id].diffusivity
+            r_squared = track_diffusivity_df.loc[track_id].r_squared
+
+            frame_node_index = unique_to_frame[track_id]
+
+            if r_squared >= 0.8:
+                frame_diffusivity[frame_node_index] = d
+
+        print('{} nodes are mapped out of total {} nodes\n'.format(np.sum(~np.isnan(frame_diffusivity)), num_nodes))
+
+        # get normalized diffusivity
+        d_max = np.nanpercentile(frame_diffusivity, 90)
+        d_normalized = frame_diffusivity / d_max
+
+        # make .bild file
+        file_dir = analy_motility_dir+'map_motility_onto_structure_frame_'+'.bild'
+        if os.path.exists(file_dir):
+            os.remove(file_dir)
+        bild = open(file_dir, "x")
+        commands = []
+
+        try:
+            coords = graph.vs['coordinate']
+
+            for idx in range(num_nodes):
+                commands.append('.color '+color_motility(d_normalized[idx])+'\n')
+                commands.append('.sphere '+coord_to_str(coords[idx])+'0.1\n')
+
+            bild.writelines(commands)
+            bild.close()
+        except:
+            bild.close()
