@@ -13,12 +13,13 @@ We need to specify the directory to save visualization files
 Because MitoGraph does coordinate transformation, original `.tif` files need to be transformed.
 This is only needed if you want to show fluorescence cloud when visualizing tracking.
 
-- `voxel_size`: provide the voxel_size same as inputs for MitoGraph segmentation, in the format of 'x_size y_size z_size'.  
-For example, `voxel_size='0.2 0.2 0.4'` refers to lateral pixel size 0.2 μm and axial pixel size 0.4 μm.
+- `voxel_size`: provide the voxel_size same as inputs for MitoGraph segmentation, in the format of 'x_size,y_size,z_size'.  
+For example, `voxel_size='0.2,0.2,0.4'` refers to lateral pixel size 0.2 μm and axial pixel size 0.4 μm.
 
 ```
 tracking_visualization.generate_transformed_tif()
 ```
+**After the output generate_transformed_tif.cxc file is created, load it in ChimeraX to save the transformed images.**
 
 ## 2. Create ChimeraX rendering of the skeleton (optional)
 We can use MitoGraph-generated `*skeleton.vtk` files for visualizing skeleton, but this is not ideal because it has fixed width and color.\
@@ -45,7 +46,7 @@ tracking_visualization.generate_tracking_arrows()
 ## 4. Visualize network tracking in ChimeraX
 Now we can combine the visualization files created above to visualize the tracking of timeseries data.
 
-- `show_tif`: if true include fluorescence cloud in background
+- `show_tif`: if true include fluorescence cloud in background. If you want to change the contrast of the .tif files, please add the [level argument](https://www.cgl.ucsf.edu/chimerax/docs/user/commands/volume.html) into the function module or the output file. 
 
 - `use_chimerax_skeleton`: if true use BILD format skeleton which is more flexible but slower to load, if false use mitograph-generated .vtk files of fixed color and size
 ```
