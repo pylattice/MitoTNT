@@ -108,12 +108,7 @@ def generate_tracking_arrows(input_dir, output_dir, vis_data_dir,
 
                 comparison = (start_coord == end_coord)
                 if comparison.all() == True:
-                    end_coord = coords_n[end] + np.random.normal(0, 0.2, 3)
-
-                disp = end_coord - start_coord
-                disp_unit = disp / np.linalg.norm(disp)
-                start_coord = start_coord + 0.02 * disp_unit # small offset to
-                end_coord = end_coord - 0.02 * disp_unit
+                    end_coord = coords_n[end] + np.random.normal(0, arrow_size/2, 3)
 
                 arrows.append('.arrow '+coord_to_str(start_coord)+coord_to_str(end_coord)+str(arrow_size/2)+' '+str(arrow_size)+' 0.6\n')
 
