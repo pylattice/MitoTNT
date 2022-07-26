@@ -179,7 +179,7 @@ def list_to_str(list1):
 # =============================================================================
 
 def frametoframe_tracking(input_dir, output_dir, start_frame, end_frame, frame_interval, tracking_interval=1,
-                          cutoff_num_neighbor=10, use_speed_cutoff=False, cutoff_speed=1,
+                          cutoff_num_neighbor=10, cutoff_speed=None,
                           graph_matching_depth=2, dist_exponent=1, top_exponent=1):
 
     print('Data loading ...\n')
@@ -254,20 +254,25 @@ def frametoframe_tracking(input_dir, output_dir, start_frame, end_frame, frame_i
         coords_m_mat = np.array(coords_m); coords_n_mat = np.array(coords_n)
         dist_cost_mat = fastdist.matrix_to_matrix_distance(coords_m_mat, coords_n_mat, fastdist.euclidean, "euclidean")
 
+        min_dists = []
+
         for i in range(number_m):
 
-            dist_cutoff = np.inf
             row = dist_cost_mat[i,:]
 
             neighbor_cutoff = sorted(row)[cutoff_num_neighbor]
 
-            speed_cutoff = np.inf
-            if use_speed_cutoff == True:
-                speed_cutoff = cutoff_speed * frame_interval # add fixed distance cutoff of default 1 um/s * frame interval (s)
-
-            dist_cutoff = np.min([neighbor_cutoff, speed_cutoff])
-            row[row > dist_cutoff] = np.nan
+            row[row > neighbor_cutoff] = np.nan
             dist_cost_mat[i,:] = row
+
+            min_dists.append(np.nanmin(row))
+
+        if cutoff_speed is None:
+            speed_cutoff = np.mean(min_dists) + 3 * np.std(min_dists)
+        else:
+            speed_cutoff = cutoff_speed * frame_interval
+
+        dist_cost_mat[dist_cost_mat > speed_cutoff] = np.nan
 
         valid_node_pairs = np.argwhere(~np.isnan(dist_cost_mat))
         cost_end = time.time()
@@ -385,20 +390,21 @@ def frametoframe_tracking(input_dir, output_dir, start_frame, end_frame, frame_i
 
                 max_segment_id = max(counts, key=counts.get)
 
-                # first filter by displacement vector norm
-                majority_nodes = segment_nodes[assigned_segment_ids==max_segment_id]
-                mean_majority_dist = np.mean([dist_cost_mat[i,j] for i,j in list(zip(majority_nodes, [assignment[n] for n in majority_nodes]))])
-                other_nodes = [n for n in segment_nodes if n not in majority_nodes]
-                for node in other_nodes:
-                    if dist_cost_mat[node, assignment[node]] > 3 * mean_majority_dist: # cutoff is here
-                        filtered_nodes.append(node)
+                if counts[max_segment_id] == 1:
+                    filtered_nodes += list(segment_nodes)
 
-                # remove outliers pointing to other segments without partners
-                segment_nodes = [n for n in segment_nodes if n not in filtered_nodes]
-                if len(segment_nodes) == 1:
-                    filtered_nodes.append(segment_nodes[0])
                 else:
-                    for index, node in enumerate(segment_nodes):
+                    # filter by displacement vector norm
+                    majority_nodes = segment_nodes[assigned_segment_ids == max_segment_id]
+                    mean_majority_dist = np.mean([dist_cost_mat[i,j] for i,j in list(zip(majority_nodes, [assignment[n] for n in majority_nodes]))])
+                    other_nodes = [n for n in segment_nodes if n not in majority_nodes]
+                    for node in other_nodes:
+                        if dist_cost_mat[node, assignment[node]] > 3 * mean_majority_dist: # cutoff is here
+                            filtered_nodes.append(node)
+
+                    # remove outliers pointing to other segments without partners
+                    unremoved_nodes = [n for n in segment_nodes if n not in filtered_nodes]
+                    for index, node in enumerate(unremoved_nodes):
                         seg_id = assigned_segment_ids[index]
                         if np.isnan(seg_id):
                             continue
@@ -407,7 +413,8 @@ def frametoframe_tracking(input_dir, output_dir, start_frame, end_frame, frame_i
                             count = np.sum([neigh in seg_to_nodes[seg_id] for neigh in neighs])
                             if count == 0: # if no neigh pointing to the same segment
                                 filtered_nodes.append(node)
-    #     print('Number of filtered nodes is', len(filtered_nodes))
+
+        # print('Number of filtered nodes is', len(filtered_nodes))
 
         # update assignment after filtering
         assignment_filtered = assignment.copy()
