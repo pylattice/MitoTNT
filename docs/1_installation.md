@@ -7,7 +7,7 @@ Or clone the repository on terminal:
 ### Software requirements
 - **[Jupyter Notebook](https://jupyter.org/)** or get it from **[Anaconda](https://www.anaconda.com/products/distribution)**
 
-- **[MitoGraph](https://github.com/vianamp/MitoGraph/)** for mitochondria segmentation
+- **[MitoGraph](https://github.com/vianamp/MitoGraph/)** for mitochondria segmentation. Available for MacOS and Linux (needs to compile from source on Linux).
 
 - **[ChimeraX](https://www.cgl.ucsf.edu/chimerax/)** for tracking visualization
 
