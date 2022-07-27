@@ -57,7 +57,7 @@ Additional parameters need to be set:
 
 - `max_gap_size`: the maximum number of frames for which gap closing is allowed. Default to 3. Value of 1 indicates no gap closing.
 
-- `memory_efficient_gap_closing`: if true use sliding block implementation of gap closing to prevent memory overflow. Default to false.
+- `block_size_factor`: values less than 1 allows the sliding block implementation of gap closing to prevent memory overflow due to large cost matrix. The size of the block is given by `block_size_factor` * total number of tracks to be closed. Default to 1 (close all tracks at once).
 
 The final node trajectories are saved in `final_node_tracks.csv` file.
 Each row is one node at one time point. 
