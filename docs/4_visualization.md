@@ -26,9 +26,9 @@ We can use MitoGraph-generated `*skeleton.vtk` files for visualizing skeleton, b
 Alternatively here, we can render the skeleton using BILD format in ChimeraX. This allows us to set the skeleton sizes, node sizes and color. However, it also takes much longer to load in ChimeraX.
 - `skeleton_colors`: a list of colors to render. Typically two colors are needed in order to differentiate current and next frames.\
 We use blue for current frame and red for next frame.
-- `skeleton_size`: diameter of the cynlinder that connects nodes. Default to 0.2.
+- `skeleton_size`: diameter of the cynlinder that connects nodes.
 - `node_size`: diameter of the spheres that make up the nodes. \
-If `node_size`= `skeleton_size`, the nodes are not obvious (but needed to fill the holes between skeletons). Default to 0.2.
+If `node_size`= `skeleton_size`, the nodes are not obvious (but needed to fill the holes between skeletons).
 ```
 tracking_visualization.generate_chimerax_skeleton()
 ```
@@ -38,7 +38,7 @@ We will use the frame-to-frame node assignments to draw the tracking vectors for
 
 - `arrow_color`: color of the tracking arrows. Default to black.
 
-- `arrow_size`: diameter of the arrow head. Default to 0.3.
+- `arrow_size`: diameter of the arrow head.
 ```
 tracking_visualization.generate_tracking_arrows()
 ```
