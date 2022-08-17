@@ -525,7 +525,7 @@ def frametoframe_tracking(input_dir, output_dir, start_frame, end_frame, frame_i
 
 def gap_closing(input_dir, output_dir, start_frame, end_frame, tracking_interval=1,
                 graph_matching_depth=2, dist_exponent=1, top_exponent=1,
-                min_track_size=5, max_gap_size=3, memory_efficient_gap_closing=False):
+                min_track_size=5, max_gap_size=3, block_size_factor=1):
 
     # reload all tracks
     all_tracks = np.load(output_dir+'/all_tracks.npy', allow_pickle=True)
@@ -557,15 +557,13 @@ def gap_closing(input_dir, output_dir, start_frame, end_frame, tracking_interval
     all_track_assignments = {}
     partition_start = 0
     iter_num = 1
+    
     while partition_start < num_tracks:
+        
         num_frame = end_frame-start_frame
 
-        if not memory_efficient_gap_closing:
-            partition_size = num_tracks
-            overlap_size = 0
-        else:
-            partition_size = int(num_tracks / num_frame) * 50
-            overlap_size =  int(num_tracks / num_frame) * 10
+        partition_size = block_size_factor * num_tracks
+        overlap_size =  0.2 * partition_size
 
         partition_end = partition_start + partition_size
         if partition_end > num_tracks:
@@ -649,8 +647,11 @@ def gap_closing(input_dir, output_dir, start_frame, end_frame, tracking_interval
             all_track_assignments[partition_start + pair[0]] = partition_start + pair[1] # offset by start index of the partition
 
         # go to next partition
-        partition_start = partition_start + partition_size - overlap_size
-        iter_num += 1
+        if block_size_factor == 1:
+            break
+        else:
+            partition_start = partition_start + partition_size - overlap_size
+            iter_num += 1
 
     # convert dictionary to array and overwrite assignment by next partition's assignment for the overlapped region
     linked_tracks = np.zeros([len(all_track_assignments.keys()), 2], dtype=int)
