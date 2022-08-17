@@ -557,10 +557,8 @@ def gap_closing(input_dir, output_dir, start_frame, end_frame, tracking_interval
     all_track_assignments = {}
     partition_start = 0
     iter_num = 1
-    
+
     while partition_start < num_tracks:
-        
-        num_frame = end_frame-start_frame
 
         partition_size = block_size_factor * num_tracks
         overlap_size =  0.2 * partition_size
