@@ -560,8 +560,8 @@ def gap_closing(input_dir, output_dir, start_frame, end_frame, tracking_interval
 
     while partition_start < num_tracks:
 
-        partition_size = block_size_factor * num_tracks
-        overlap_size =  0.2 * partition_size
+        partition_size = int(block_size_factor * num_tracks)
+        overlap_size =  int(0.2 * partition_size)
 
         partition_end = partition_start + partition_size
         if partition_end > num_tracks:
@@ -716,7 +716,7 @@ def gap_closing(input_dir, output_dir, start_frame, end_frame, tracking_interval
 
 
     # Save tracks in the form of one node per row ###
-    print('Saving final node trajectory file ... This might take a while.\n')
+    print('Saving final node trajectory file ... This might take a few minutes for large files.\n')
     tracks = pd.DataFrame(columns={'frame_id', 'unique_node_id', 'frame_node_id', 'frame_seg_id', 'frame_frag_id', 'x', 'y', 'z','intensity','width'})
     tracks = tracks[['frame_id', 'unique_node_id', 'frame_node_id', 'frame_seg_id', 'frame_frag_id', 'x', 'y', 'z','intensity','width']] # reorder the columns
 
