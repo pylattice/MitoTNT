@@ -21,14 +21,12 @@ tracking_visualization.generate_transformed_tif()
 ```
 **After the output generate_transformed_tif.cxc file is created, load it in ChimeraX to save the transformed images.**
 
-## 2. Create ChimeraX rendering of the skeleton (optional)
+## 2. Create ChimeraX rendering of the skeleton (optional but recommended)
 We can use MitoGraph-generated `*skeleton.vtk` files for visualizing skeleton, but this is not ideal because it has fixed width and color.\
 Alternatively here, we can render the skeleton using BILD format in ChimeraX. This allows us to set the skeleton sizes, node sizes and color. However, it also takes much longer to load in ChimeraX.
-- `skeleton_colors`: a list of colors to render. Typically two colors are needed in order to differentiate current and next frames.\
-We use blue for current frame and red for next frame.
-- `skeleton_size`: diameter of the cynlinder that connects nodes.
-- `node_size`: diameter of the spheres that make up the nodes. \
-If `node_size`= `skeleton_size`, the nodes are not obvious (but needed to fill the holes between skeletons).
+- `skeleton_colors`: a list of two colors to render for current and next frames. We use blue for current frame and red for next frame. [See more colors.](https://www.cgl.ucsf.edu/chimerax/docs/user/commands/colornames.html)
+- `skeleton_size`: diameter of the skeleton that connects nodes.
+- `node_size`: diameter of the spheres that make up the nodes. If `node_size`= `skeleton_size`, the nodes are not visible (but still required to fill the gaps along the skeletons).
 ```
 tracking_visualization.generate_chimerax_skeleton()
 ```
@@ -38,17 +36,24 @@ We will use the frame-to-frame node assignments to draw the tracking vectors for
 
 - `arrow_color`: color of the tracking arrows. Default to black.
 
-- `arrow_size`: diameter of the arrow head.
+- `arrow_size`: diameter of the arrow stem.
 ```
 tracking_visualization.generate_tracking_arrows()
 ```
-
 ## 4. Visualize network tracking in ChimeraX
-Now we can combine the visualization files created above to visualize the tracking of timeseries data.
+Now we can combine the visualization files created above to visualize the tracking of timelapse data.
+- `show_tif`: if true include fluorescence cloud in background. 
 
-- `show_tif`: if true include fluorescence cloud in background. If you want to change the contrast of the .tif files, please add the [level argument](https://www.cgl.ucsf.edu/chimerax/docs/user/commands/volume.html) into the function module or the output file. 
+- `tif_colors`: color of fluorescence cloud. See [colors](https://www.cgl.ucsf.edu/chimerax/docs/user/commands/colornames.html).
 
-- `use_chimerax_skeleton`: if true use BILD format skeleton which is more flexible but slower to load, if false use mitograph-generated .vtk files of fixed color and size
+- `threshold_level`: if you want to change the contrast/thickness of the fluorescence cloud, use the [level argument](https://www.cgl.ucsf.edu/chimerax/docs/user/commands/volume.html) in ChimeraX.
+
+- `use_chimerax_skeleton`:  
+if true use BILD format skeleton which is more flexible but slower to load;  
+if false use mitograph-generated .vtk files of fixed color and size (not recommended but quicker).
+
+- `skeleton_colors`: same as in step 2.
+
 ```
 tracking_visualization.visualize_tracking()
 ```
