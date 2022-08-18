@@ -16,7 +16,7 @@ def coord_to_str(coord):
     return string
 
 def generate_transformed_tif(data_dir, vis_dir, vis_data_dir,
-                             start_frame, end_frame, voxel_size):
+                             start_frame, end_frame, tracking_interval, voxel_size):
 
     file_dir = vis_dir+'generate_transformed_tif.cxc'
     if os.path.exists(file_dir):
@@ -24,7 +24,7 @@ def generate_transformed_tif(data_dir, vis_dir, vis_data_dir,
     script = open(file_dir, 'x')
     commands = []
 
-    for frame in range(start_frame, end_frame+1):
+    for frame in range(start_frame, end_frame, tracking_interval):
 
         fid = str(frame)
         commands.append('close\n')
@@ -40,7 +40,7 @@ def generate_transformed_tif(data_dir, vis_dir, vis_data_dir,
 
 skeleton_colors = ['b','r']
 def generate_chimerax_skeleton(input_dir, vis_dir, vis_data_dir,
-                               start_frame, end_frame,
+                               start_frame, end_frame, tracking_interval,
                                skeleton_colors, skeleton_size=0.02, node_size=0.02):
 
     inputs = np.load(input_dir+'tracking_inputs.npz', allow_pickle=True)
@@ -49,7 +49,7 @@ def generate_chimerax_skeleton(input_dir, vis_dir, vis_data_dir,
     print('Generate network skeleton in BILD format ...')
     for color in skeleton_colors:
         print('Color', color)
-        for frame in trange(start_frame, end_frame+1):
+        for frame in trange(start_frame, end_frame, tracking_interval):
 
             fid = str(frame)
             file_dir = vis_data_dir+'frame_'+fid+'_chimerax_skeleton_'+color+'.bild'
@@ -76,8 +76,8 @@ def generate_chimerax_skeleton(input_dir, vis_dir, vis_data_dir,
 
 
 def generate_tracking_arrows(input_dir, output_dir, vis_data_dir,
-                             start_frame, end_frame,
-                             arrow_color='black', arrow_size=0.03):
+                             start_frame, end_frame, tracking_interval,
+                             arrow_color='black', arrow_size=0.02):
 
     inputs = np.load(input_dir+'tracking_inputs.npz', allow_pickle=True)
     full_graph_all_frames = inputs['full_graphs']
@@ -86,7 +86,7 @@ def generate_tracking_arrows(input_dir, output_dir, vis_data_dir,
     linked_nodes = outputs['linked_nodes']
 
     print('Generate tracking arrows in BILD format ...')
-    for index, frame in enumerate(trange(start_frame, end_frame)):
+    for index, frame in enumerate(trange(start_frame, end_frame, tracking_interval)):
         arrows = []
         arrows.append('.color '+arrow_color+'\n')
 
@@ -97,7 +97,7 @@ def generate_tracking_arrows(input_dir, output_dir, vis_data_dir,
 
         try:
             coords_m = full_graph_all_frames[frame].vs['coordinate']
-            coords_n = full_graph_all_frames[frame+1].vs['coordinate']
+            coords_n = full_graph_all_frames[frame+tracking_interval].vs['coordinate']
 
             # create linking vectors for frame m,n
             linked = linked_nodes[index]
@@ -108,9 +108,9 @@ def generate_tracking_arrows(input_dir, output_dir, vis_data_dir,
 
                 comparison = (start_coord == end_coord)
                 if comparison.all() == True:
-                    end_coord = coords_n[end] + np.random.normal(0, arrow_size/2, 3)
+                    end_coord = coords_n[end] + np.random.normal(0, arrow_size, 3)
 
-                arrows.append('.arrow '+coord_to_str(start_coord)+coord_to_str(end_coord)+str(arrow_size/2)+' '+str(arrow_size)+' 0.6\n')
+                arrows.append('.arrow '+coord_to_str(start_coord)+coord_to_str(end_coord)+str(arrow_size)+' '+str(arrow_size*2)+' 0.6\n')
 
             bild.writelines(arrows)
             bild.close()
@@ -122,8 +122,9 @@ def generate_tracking_arrows(input_dir, output_dir, vis_data_dir,
 
 
 def visualize_tracking(data_dir, input_dir, vis_dir, vis_data_dir,
-                       start_frame, end_frame,
-                       skeleton_colors, show_tif, use_chimerax_skeleton):
+                       start_frame, end_frame, tracking_interval,
+                       show_tif, tif_colors, threshold_level,
+                       use_chimerax_skeleton, skeleton_colors):
 
     file_dir = vis_dir+'visualize_tracking.cxc'
     if os.path.exists(file_dir):
@@ -133,10 +134,10 @@ def visualize_tracking(data_dir, input_dir, vis_dir, vis_data_dir,
 
     idx = 1
     commands.append('close\n')
-    for frame in range(start_frame, end_frame):
+    for frame in range(start_frame, end_frame, tracking_interval):
 
         frame_m = str(frame)
-        frame_n = str(frame+1)
+        frame_n = str(frame+tracking_interval)
 
         # load arrow
         commands.append('open \"'+vis_data_dir+'frame_'+frame_m+'_arrows.bild\"\n')
@@ -153,9 +154,9 @@ def visualize_tracking(data_dir, input_dir, vis_dir, vis_data_dir,
         # load tif
         if show_tif:
             commands.append('open \"'+vis_data_dir+'frame_'+frame_m+'_yflip.cmap\"\n')
-            commands.append('volume #'+str(idx+3)+' color '+skeleton_colors[0]+' style image\n')
+            commands.append('volume #'+str(idx+3)+' color '+tif_colors[0]+' style image '+threshold_level+'\n')
             commands.append('open \"'+vis_data_dir+'frame_'+frame_n+'_yflip.cmap\"\n')
-            commands.append('volume #'+str(idx+4)+' color '+skeleton_colors[1]+' style image\n')
+            commands.append('volume #'+str(idx+4)+' color '+tif_colors[1]+' style image '+threshold_level+'\n')
 
         # combine the models
         if show_tif:

@@ -362,15 +362,15 @@ def map_node_motility_onto_surface(input_dir, output_dir, analy_motility_dir,
 
     tracks = pd.read_csv(output_dir+'final_node_tracks.csv')
 
-    track_diffusivity_df = pd.read_csv(analy_motility_dir+'node_diffusivity.csv')
+    node_diffusivity_df = pd.read_csv(analy_motility_dir+'node_diffusivity.csv')
 
     for center_frame in selected_frames:
         graph = full_graph_all_frames[center_frame]
         cc = graph.components()
         num_nodes = len(graph.vs)
 
-        frame_diffusivity = np.empty(num_nodes)
-        frame_diffusivity[:] = np.nan
+        node_diffusivity = np.empty(num_nodes)
+        node_diffusivity[:] = np.nan
 
         frame_tracks = tracks[tracks.frame_id==center_frame]
         frame_track_ids = [int(n) for n in frame_tracks.unique_node_id.tolist()]
@@ -381,22 +381,22 @@ def map_node_motility_onto_surface(input_dir, output_dir, analy_motility_dir,
 
         for track_id in frame_track_ids:
 
-            d = track_diffusivity_df.loc[track_id].diffusivity
-            r_squared = track_diffusivity_df.loc[track_id].r_squared
+            d = node_diffusivity_df.loc[track_id].diffusivity
+            r_squared = node_diffusivity_df.loc[track_id].r_squared
 
             frame_node_index = unique_to_frame[track_id]
 
             if r_squared >= 0.8:
-                frame_diffusivity[frame_node_index] = d
+                node_diffusivity[frame_node_index] = d
 
-        print('{} nodes are mapped out of total {} nodes\n'.format(np.sum(~np.isnan(frame_diffusivity)), num_nodes))
+        print('{} nodes are mapped out of total {} nodes\n'.format(np.sum(~np.isnan(node_diffusivity)), num_nodes))
 
         # get normalized diffusivity
-        d_max = np.nanpercentile(frame_diffusivity, 90)
-        d_normalized = frame_diffusivity / d_max
+        d_max = np.nanpercentile(node_diffusivity, 90)
+        d_normalized = node_diffusivity / d_max
 
         # make .bild file
-        file_dir = analy_motility_dir+'map_motility_onto_structure_frame_'+'.bild'
+        file_dir = analy_motility_dir+'map_node_motility_frame_'+'.bild'
         if os.path.exists(file_dir):
             os.remove(file_dir)
         bild = open(file_dir, "x")
@@ -413,3 +413,101 @@ def map_node_motility_onto_surface(input_dir, output_dir, analy_motility_dir,
             bild.close()
         except:
             bild.close()
+
+        print('Load file', file_dir, '\nin ChimeraX to visualize motility map')
+
+
+def map_segment_motility_onto_surface(input_dir, output_dir, analy_motility_dir,
+                                      selected_frames):
+
+    # load data
+    inputs = np.load(input_dir+'tracking_inputs.npz', allow_pickle=True)
+    full_graph_all_frames = inputs['full_graphs']
+    all_segment_nodes = inputs['segment_nodes']
+
+    seg_diffusivity_df = pd.read_csv(analy_motility_dir+'segment_diffusivity.csv')
+
+    for center_frame in selected_frames:
+        graph = full_graph_all_frames[center_frame]
+        num_nodes = len(graph.vs)
+
+        segment_nodes = all_segment_nodes[center_frame]
+        num_segs = len(segment_nodes)
+
+        seg_diffusivity = seg_diffusivity_df[seg_diffusivity_df['center_frame']==center_frame].diffusivity
+
+
+        print('{} segments are mapped out of total {} nodes\n'.format(np.sum(~np.isnan(seg_diffusivity)), num_segs))
+
+        # get normalized diffusivity
+        d_max = np.nanpercentile(seg_diffusivity, 90)
+        d_normalized = seg_diffusivity / d_max
+
+        # make .bild file
+        file_dir = analy_motility_dir+'map_segment_motility_frame_'+'.bild'
+        if os.path.exists(file_dir):
+            os.remove(file_dir)
+        bild = open(file_dir, "x")
+        commands = []
+
+        try:
+            coords = graph.vs['coordinate']
+
+            for seg_id, seg in enumerate(segment_nodes):
+                commands.append('.color '+color_motility(d_normalized[seg_id])+'\n')
+                for node in seg:
+                    commands.append('.sphere '+coord_to_str(coords[node])+'0.1\n')
+
+            bild.writelines(commands)
+            bild.close()
+        except:
+            bild.close()
+
+        print('Load file', file_dir, '\nin ChimeraX to visualize motility map')
+
+
+def map_fragment_motility_onto_surface(input_dir, output_dir, analy_motility_dir,
+                                       selected_frames):
+
+    # load data
+    inputs = np.load(input_dir+'tracking_inputs.npz', allow_pickle=True)
+    full_graph_all_frames = inputs['full_graphs']
+
+    frag_diffusivity_df = pd.read_csv(analy_motility_dir+'fragment_diffusivity.csv')
+
+    for center_frame in selected_frames:
+        graph = full_graph_all_frames[center_frame]
+        num_nodes = len(graph.vs)
+
+        fragment_nodes = graph.components()
+        num_frags = len(fragment_nodes)
+
+        frag_diffusivity = frag_diffusivity_df[frag_diffusivity_df['center_frame']==center_frame].diffusivity
+
+        print('{} fragments are mapped out of total {} fragments\n'.format(np.sum(~np.isnan(frag_diffusivity)), num_frags))
+
+        # get normalized diffusivity
+        d_max = np.nanpercentile(frag_diffusivity, 90)
+        d_normalized = frag_diffusivity / d_max
+
+        # make .bild file
+        file_dir = analy_motility_dir+'map_fragment_motility_frame_'+'.bild'
+        if os.path.exists(file_dir):
+            os.remove(file_dir)
+        bild = open(file_dir, "x")
+        commands = []
+
+        try:
+            coords = graph.vs['coordinate']
+
+            for frag_id, frag in enumerate(fragment_nodes):
+                commands.append('.color '+color_motility(d_normalized[frag_id])+'\n')
+                for node in frag:
+                    commands.append('.sphere '+coord_to_str(coords[node])+'0.1\n')
+
+            bild.writelines(commands)
+            bild.close()
+        except:
+            bild.close()
+
+        print('Load file', file_dir, '\nin ChimeraX to visualize motility map')
