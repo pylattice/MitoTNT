@@ -5,6 +5,7 @@ It is built upon mitochondria segmentation provided by MitoGraph, and visualizat
 
 MitoTNT is written by Zichen (Zachary) Wang (ziw056@ucsd.edu), with the help from people in the [Johannes Schöneberg lab](https://www.schoeneberglab.org/) at UCSD.
 
+![type:video](./contents/home_page_movie.mp4)
 # Installation
 On github, download this [repository](https://github.com/pylattice/mitoTNT).  
 
@@ -103,16 +104,15 @@ generate_tracking_inputs.generate()
 In addition to the directories declared above, we will create `output_dir` to store the tracking outputs. For test data, you can use `test_data/tracking_outputs`.
 
 Additional parameters needed for frame-to-frame tracking:
+- `tracking_interval`: the frame interval between the two frames to be tracked. Default to 1 (every consecutive frame).  
 
-- `tracking_interval`: the frame interval between the two frames to be tracked. Default to 1 (every consecutive frame).
-
-- `distance_cutoff_mode`: cutoff used to eliminate nodes too far away.  
-If 'neighbor', use the distance to N-th closest neighbor, where N is given by `cutoff_num_neighbor`, default to 10.  
-If 'speed', use the frame interval (s) x maximum allowed speed given by `cutoff_speed`, defualt to 1 μm/s.
+Distance threshold is computed as the minimum of two values:  
+1) the distance to the N-th closest neighbor where N is given by `cutoff_num_neighbor`, default to 10;  
+2) the frame interval times the maximum allowed speed given by `cutoff_speed`, default to `None` and estimated from the distance matrix.
 
 - `graph_matching_depth`: the maximum level used for graph comparison. Default to 2 (usually sufficient).
-
 - `dist_exponent`, `top_exponent`: the final cost term is given by D<sup>dist_exponent</sup> x T<sup>top_exponent</sup>, where D, T are the distance and topology costs respectively. Default both to 1 (equal weighting).
+
 
 To run tracking:
 ```
