@@ -11,7 +11,7 @@ First specify the directories we will use:
 
 - `data_dir`: the directory where MitoGraph segmented mitochondria is stored. For test data, this is `test_data/mitograph`.
 
-- `input_dir`: the directory where the processed inputs used for tracking will be stored. For test data, you can use `test_data/tracking_input`. This is an empty folder that will be created.
+- `input_dir`: the directory where the processed inputs used for tracking will be stored. For test data, you can use `test_data/tracking_inputs`. This is an empty folder that will be created.
 
 After specifying the folders, we need to set a few parameters:
 
@@ -29,7 +29,7 @@ generate_tracking_inputs.generate()
 ## 2. Frame-to-frame tracking
 **In this section we will perform node assignments for each consecutive frames.**
 
-In addition to the directories declared above, we will create `output_dir` to store the tracking outputs. For test data, you can use `test_data/tracking_output`.
+In addition to the directories declared above, we will create `output_dir` to store the tracking outputs. For test data, you can use `test_data/tracking_outputs`.
 
 Additional parameters needed for frame-to-frame tracking:
 
