@@ -62,7 +62,7 @@ def compute_node_diffusivity(input_dir, output_dir, analy_motility_dir,
 
         # choose the number of data points to fit
         if len(eata_msd) < 2:
-            node_diffusivity.append({'track_id':n, 'diffusivity':np.nan, 'msd':np.nan, 'r_squared':np.nan, 'num_points':1})
+            node_diffusivity.append({'unique_node_id':n, 'diffusivity':np.nan, 'msd':np.nan, 'r_squared':np.nan, 'num_points':1})
             continue
         elif len(eata_msd) > max_tau:
             n_points = max_tau
@@ -186,7 +186,7 @@ def compute_segment_diffusivity(input_dir, output_dir, analy_motility_dir,
 
             # choose the number of data points to fit
             if len(eata_msd) <= 1:
-                seg_diffusivity.append({'center_frame': center_frame, 'seg_id':seg_id, 'diffusivity':np.nan, 'msd':np.nan, 'r_squared':np.nan, 'num_points':1})
+                seg_diffusivity.append({'center_frame_id': center_frame, 'seg_id':seg_id, 'diffusivity':np.nan, 'msd':np.nan, 'r_squared':np.nan, 'num_points':1})
                 continue
             elif len(eata_msd) > max_tau:
                 n_points = max_tau
@@ -207,7 +207,7 @@ def compute_segment_diffusivity(input_dir, output_dir, analy_motility_dir,
             else:
                 r_squared = 1 - res/total_sum
 
-            seg_diffusivity.append({'center_frame': center_frame, 'seg_id':seg_id, 'diffusivity':d, 'msd':msd_per_frame, 'r_squared':r_squared, 'num_points':n_points})
+            seg_diffusivity.append({'center_frame_id': center_frame, 'seg_id':seg_id, 'diffusivity':d, 'msd':msd_per_frame, 'r_squared':r_squared, 'num_points':n_points})
 
     seg_diffusivity = pd.DataFrame.from_dict(seg_diffusivity)
     seg_diffusivity.to_csv(analy_motility_dir+'segment_diffusivity.csv', index=False)
@@ -311,7 +311,7 @@ def compute_fragment_diffusivity(input_dir, output_dir, analy_motility_dir,
 
             # choose the number of data points to fit
             if len(eata_msd) <= 1:
-                frag_diffusivity.append({'center_frame': center_frame, 'frag_id':frag_id, 'diffusivity':np.nan, 'msd':np.nan, 'r_squared':np.nan, 'num_points':1})
+                frag_diffusivity.append({'center_frame_id': center_frame, 'frag_id':frag_id, 'diffusivity':np.nan, 'msd':np.nan, 'r_squared':np.nan, 'num_points':1})
                 continue
             elif len(eata_msd) > max_tau:
                 n_points = max_tau
@@ -354,7 +354,7 @@ def color_motility(diffusivity):
     return str(color[0])+' '+str(color[1])+' '+str(color[2])
 
 def map_node_motility_onto_surface(input_dir, output_dir, analy_motility_dir,
-                                   selected_frames):
+                                   node_size, selected_frames):
 
     # load data
     inputs = np.load(input_dir+'tracking_inputs.npz', allow_pickle=True)
@@ -396,7 +396,7 @@ def map_node_motility_onto_surface(input_dir, output_dir, analy_motility_dir,
         d_normalized = node_diffusivity / d_max
 
         # make .bild file
-        file_dir = analy_motility_dir+'map_node_motility_frame_'+'.bild'
+        file_dir = analy_motility_dir+'map_node_motility_frame_'+str(center_frame)+'.bild'
         if os.path.exists(file_dir):
             os.remove(file_dir)
         bild = open(file_dir, "x")
@@ -407,7 +407,7 @@ def map_node_motility_onto_surface(input_dir, output_dir, analy_motility_dir,
 
             for idx in range(num_nodes):
                 commands.append('.color '+color_motility(d_normalized[idx])+'\n')
-                commands.append('.sphere '+coord_to_str(coords[idx])+'0.1\n')
+                commands.append('.sphere '+coord_to_str(coords[idx])+str(node_size)+'\n')
 
             bild.writelines(commands)
             bild.close()
@@ -418,7 +418,7 @@ def map_node_motility_onto_surface(input_dir, output_dir, analy_motility_dir,
 
 
 def map_segment_motility_onto_surface(input_dir, output_dir, analy_motility_dir,
-                                      selected_frames):
+                                      node_size, selected_frames):
 
     # load data
     inputs = np.load(input_dir+'tracking_inputs.npz', allow_pickle=True)
@@ -434,7 +434,7 @@ def map_segment_motility_onto_surface(input_dir, output_dir, analy_motility_dir,
         segment_nodes = all_segment_nodes[center_frame]
         num_segs = len(segment_nodes)
 
-        seg_diffusivity = seg_diffusivity_df[seg_diffusivity_df['center_frame']==center_frame].diffusivity
+        seg_diffusivity = seg_diffusivity_df[seg_diffusivity_df['center_frame_id']==center_frame].diffusivity
 
 
         print('{} segments are mapped out of total {} nodes\n'.format(np.sum(~np.isnan(seg_diffusivity)), num_segs))
@@ -444,7 +444,7 @@ def map_segment_motility_onto_surface(input_dir, output_dir, analy_motility_dir,
         d_normalized = seg_diffusivity / d_max
 
         # make .bild file
-        file_dir = analy_motility_dir+'map_segment_motility_frame_'+'.bild'
+        file_dir = analy_motility_dir+'map_segment_motility_frame_'+str(center_frame)+'.bild'
         if os.path.exists(file_dir):
             os.remove(file_dir)
         bild = open(file_dir, "x")
@@ -456,7 +456,7 @@ def map_segment_motility_onto_surface(input_dir, output_dir, analy_motility_dir,
             for seg_id, seg in enumerate(segment_nodes):
                 commands.append('.color '+color_motility(d_normalized[seg_id])+'\n')
                 for node in seg:
-                    commands.append('.sphere '+coord_to_str(coords[node])+'0.1\n')
+                    commands.append('.sphere '+coord_to_str(coords[node])+str(node_size)+'\n')
 
             bild.writelines(commands)
             bild.close()
@@ -467,7 +467,7 @@ def map_segment_motility_onto_surface(input_dir, output_dir, analy_motility_dir,
 
 
 def map_fragment_motility_onto_surface(input_dir, output_dir, analy_motility_dir,
-                                       selected_frames):
+                                       node_size, selected_frames):
 
     # load data
     inputs = np.load(input_dir+'tracking_inputs.npz', allow_pickle=True)
@@ -482,7 +482,7 @@ def map_fragment_motility_onto_surface(input_dir, output_dir, analy_motility_dir
         fragment_nodes = graph.components()
         num_frags = len(fragment_nodes)
 
-        frag_diffusivity = frag_diffusivity_df[frag_diffusivity_df['center_frame']==center_frame].diffusivity
+        frag_diffusivity = frag_diffusivity_df[frag_diffusivity_df['center_frame_id']==center_frame].diffusivity
 
         print('{} fragments are mapped out of total {} fragments\n'.format(np.sum(~np.isnan(frag_diffusivity)), num_frags))
 
@@ -491,7 +491,7 @@ def map_fragment_motility_onto_surface(input_dir, output_dir, analy_motility_dir
         d_normalized = frag_diffusivity / d_max
 
         # make .bild file
-        file_dir = analy_motility_dir+'map_fragment_motility_frame_'+'.bild'
+        file_dir = analy_motility_dir+'map_fragment_motility_frame_'+str(center_frame)+'.bild'
         if os.path.exists(file_dir):
             os.remove(file_dir)
         bild = open(file_dir, "x")
@@ -503,7 +503,7 @@ def map_fragment_motility_onto_surface(input_dir, output_dir, analy_motility_dir
             for frag_id, frag in enumerate(fragment_nodes):
                 commands.append('.color '+color_motility(d_normalized[frag_id])+'\n')
                 for node in frag:
-                    commands.append('.sphere '+coord_to_str(coords[node])+'0.1\n')
+                    commands.append('.sphere '+coord_to_str(coords[node])+str(node_size)+'\n')
 
             bild.writelines(commands)
             bild.close()

@@ -72,17 +72,19 @@ def detect(input_dir, output_dir,
 
     inputs = np.load(input_dir+'tracking_inputs.npz', allow_pickle=True)
     full_graph_all_frames = inputs['full_graphs']
-    num_frames = len(full_graph_all_frames)
+    total_number_of_frames = len(full_graph_all_frames)
 
-    if start_frame < half_win_size or end_frame > num_frames - half_win_size:
-        raise Exception('start_frame must be >= half_win_size and end_frame must be <= total number of frames - half_win_size')
+    if start_frame < half_win_size:
+        raise Exception('start_frame must be >= half_win_size but start_frame is '+str(start_frame)+' and half_win_size is '+str(half_win_size))
+    if end_frame > total_number_of_frames - half_win_size:
+        raise Exception('end_frame must be <= total_number_of_frames - half_win_size but end_frame is '+str(end_frame)+' and total_number_of_frames - half_win_size is '+str(total_number_of_frames-half_win_size))
 
     tracks = pd.read_csv(output_dir+'final_node_tracks.csv')
     tracks.loc[:,'frame_id'] = tracks.loc[:,'frame_id'].astype(int)
     tracks.loc[:,'frame_frag_id'] = tracks.loc[:,'frame_frag_id'].astype(int)
 
     all_fragments = []
-    for frame in range(0, num_frames):
+    for frame in range(0, total_number_of_frames):
         full_graph = full_graph_all_frames[frame]
         frags = full_graph.components()
         all_fragments.append(frags)

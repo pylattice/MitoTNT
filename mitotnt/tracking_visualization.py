@@ -24,7 +24,7 @@ def generate_transformed_tif(data_dir, vis_dir, vis_data_dir,
     script = open(file_dir, 'x')
     commands = []
 
-    for frame in range(start_frame, end_frame, tracking_interval):
+    for frame in range(start_frame, end_frame+tracking_interval, tracking_interval):
 
         fid = str(frame)
         commands.append('close\n')
@@ -49,7 +49,7 @@ def generate_chimerax_skeleton(input_dir, vis_dir, vis_data_dir,
     print('Generate network skeleton in BILD format ...')
     for color in skeleton_colors:
         print('Color', color)
-        for frame in trange(start_frame, end_frame, tracking_interval):
+        for frame in trange(start_frame, end_frame+tracking_interval, tracking_interval):
 
             fid = str(frame)
             file_dir = vis_data_dir+'frame_'+fid+'_chimerax_skeleton_'+color+'.bild'
