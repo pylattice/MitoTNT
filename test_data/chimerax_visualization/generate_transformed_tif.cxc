@@ -1,0 +1,30 @@
+close
+open "D:/Github/MitoTNT/test_data/mitograph/frame_0/frame_0.tif"
+volume #1 voxelSize 0.145,0.145,0.145
+volume flip #1 axis y
+save "D:/Github/MitoTNT/test_data/chimerax_visualization/data/frame_0_yflip.cmap" #2
+close
+open "D:/Github/MitoTNT/test_data/mitograph/frame_1/frame_1.tif"
+volume #1 voxelSize 0.145,0.145,0.145
+volume flip #1 axis y
+save "D:/Github/MitoTNT/test_data/chimerax_visualization/data/frame_1_yflip.cmap" #2
+close
+open "D:/Github/MitoTNT/test_data/mitograph/frame_2/frame_2.tif"
+volume #1 voxelSize 0.145,0.145,0.145
+volume flip #1 axis y
+save "D:/Github/MitoTNT/test_data/chimerax_visualization/data/frame_2_yflip.cmap" #2
+close
+open "D:/Github/MitoTNT/test_data/mitograph/frame_3/frame_3.tif"
+volume #1 voxelSize 0.145,0.145,0.145
+volume flip #1 axis y
+save "D:/Github/MitoTNT/test_data/chimerax_visualization/data/frame_3_yflip.cmap" #2
+close
+open "D:/Github/MitoTNT/test_data/mitograph/frame_4/frame_4.tif"
+volume #1 voxelSize 0.145,0.145,0.145
+volume flip #1 axis y
+save "D:/Github/MitoTNT/test_data/chimerax_visualization/data/frame_4_yflip.cmap" #2
+close
+open "D:/Github/MitoTNT/test_data/mitograph/frame_5/frame_5.tif"
+volume #1 voxelSize 0.145,0.145,0.145
+volume flip #1 axis y
+save "D:/Github/MitoTNT/test_data/chimerax_visualization/data/frame_5_yflip.cmap" #2
