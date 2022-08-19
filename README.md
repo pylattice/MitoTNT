@@ -5,8 +5,9 @@ It is built upon mitochondria segmentation provided by MitoGraph, and visualizat
 
 MitoTNT is written by Zichen (Zachary) Wang (ziw056@ucsd.edu), with the help from people in the [Johannes Schöneberg lab](https://www.schoeneberglab.org/) at UCSD.
 
+![type:video](./contents/home_page_movie.mp4)
 # Installation
-On github, download this repository.  
+On github, download this [repository](https://github.com/pylattice/mitoTNT).  
 
 Or clone the repository on terminal:  
 `git clone https://github.com/pylattice/mitoTNT.git`  
@@ -14,7 +15,7 @@ Or clone the repository on terminal:
 ### Software requirements
 - **[Jupyter Notebook](https://jupyter.org/)** or get it from **[Anaconda](https://www.anaconda.com/products/distribution)**
 
-- **[MitoGraph](https://github.com/vianamp/MitoGraph/)** for mitochondria segmentation
+- **[MitoGraph](https://github.com/vianamp/MitoGraph/)** for mitochondria segmentation. Available for MacOS and Linux (needs to compile from source on Linux).
 
 - **[ChimeraX](https://www.cgl.ucsf.edu/chimerax/)** for tracking visualization
 
@@ -37,6 +38,7 @@ pip install -r python_dependencies.txt
 ``
 # Data Preparation
 **To perform tracking, mitochondria 3D image stacks needs to be segmented using MitoGraph for all time points.**
+Example dataset has been provided under `test_data/mitograph`, which are MitoGraph-segmented. You can skip this section if using the example dataset.
 
 ## 1. Install MitoGraph
 MitoGraph can be installed [here](https://github.com/vianamp/MitoGraph/#how-to-install)
@@ -70,7 +72,7 @@ We recommend using [ChimeraX](https://www.cgl.ucsf.edu/chimerax/) to open `.tif`
 More information for using MitoGraph and selecting parameters can be found in the publication [here](https://doi.org/10.1016/j.ab.2018.02.022).
 # Network Tracking
 Open the terminal and type `jupyter notebook` to start Jupyter Notebook.  
-Find the root directory of MitoTNT and open `tracking_pipeline.ipynb` for mitochondrial network tracking.
+Find the root directory of MitoTNT and open `mitotnt_tracking_pipeline.ipynb` for mitochondrial network tracking.
 
 ## 1. Generate inputs for tracking
 **In this section we will process the raw data into a format that is used for the subsequent tracking.**
@@ -81,7 +83,7 @@ First specify the directories we will use:
 
 - `data_dir`: the directory where MitoGraph segmented mitochondria is stored. For test data, this is `test_data/mitograph`.
 
-- `input_dir`: the directory where the processed inputs used for tracking will be stored. For test data, you can use `test_data/tracking_input`. This is an empty folder that will be created.
+- `input_dir`: the directory where the processed inputs used for tracking will be stored. For test data, you can use `test_data/tracking_inputs`. This is an empty folder that will be created.
 
 After specifying the folders, we need to set a few parameters:
 
@@ -99,7 +101,7 @@ generate_tracking_inputs.generate()
 ## 2. Frame-to-frame tracking
 **In this section we will perform node assignments for each consecutive frames.**
 
-In addition to the directories declared above, we will create `output_dir` to store the tracking outputs. For test data, you can use `test_data/tracking_output`.
+In addition to the directories declared above, we will create `output_dir` to store the tracking outputs. For test data, you can use `test_data/tracking_outputs`.
 
 Additional parameters needed for frame-to-frame tracking:
 
@@ -127,7 +129,7 @@ Additional parameters need to be set:
 
 - `max_gap_size`: the maximum number of frames for which gap closing is allowed. Default to 3. Value of 1 indicates no gap closing.
 
-- `memory_efficient_gap_closing`: if true use sliding block implementation of gap closing to prevent memory overflow. Default to false.
+- `block_size_factor`: values less than 1 allows the sliding block implementation of gap closing to prevent memory overflow due to large cost matrix. The size of the block is given by `block_size_factor` * total number of tracks to be closed. Default to 1 (close all tracks at once).
 
 The final node trajectories are saved in `final_node_tracks.csv` file.
 Each row is one node at one time point. 
@@ -174,20 +176,23 @@ We need to specify the directory to save visualization files
 - `vis_data_dir`: store `.cmap ` and `.bild` files created for each frame and used for visualization. You can use `vis_dir/data/` for example.
 
 ## 1. Transform .tif to match MitoGraph coordinates (optional)
-Because MitoGraph does coordinate transformation, original `.tif` files need to be transformed.  
+Because MitoGraph does coordinate transformation, original `.tif` files need to be transformed.
 This is only needed if you want to show fluorescence cloud when visualizing tracking.
+
+- `voxel_size`: provide the voxel_size same as inputs for MitoGraph segmentation, in the format of 'x_size,y_size,z_size'.  
+For example, `voxel_size='0.2,0.2,0.4'` refers to lateral pixel size 0.2 μm and axial pixel size 0.4 μm.
+
 ```
 tracking_visualization.generate_transformed_tif()
 ```
+**After the output generate_transformed_tif.cxc file is created, load it in ChimeraX to save the transformed images.**
 
-## 2. Create ChimeraX rendering of the skeleton (optional)
+## 2. Create ChimeraX rendering of the skeleton (optional but recommended)
 We can use MitoGraph-generated `*skeleton.vtk` files for visualizing skeleton, but this is not ideal because it has fixed width and color.\
 Alternatively here, we can render the skeleton using BILD format in ChimeraX. This allows us to set the skeleton sizes, node sizes and color. However, it also takes much longer to load in ChimeraX.
-- `skeleton_colors`: a list of colors to render. Typically two colors are needed in order to differentiate current and next frames.\
-We use blue for current frame and red for next frame.
-- `skeleton_size`: diameter of the cynlinder that connects nodes. Default to 0.2.
-- `node_size`: diameter of the spheres that make up the nodes. \
-If `node_size`= `skeleton_size`, the nodes are not obvious (but needed to fill the holes between skeletons). Default to 0.2.
+- `skeleton_colors`: a list of two colors to render for current and next frames. We use blue for current frame and red for next frame. [See more colors.](https://www.cgl.ucsf.edu/chimerax/docs/user/commands/colornames.html)
+- `skeleton_size`: diameter of the skeleton that connects nodes.
+- `node_size`: diameter of the spheres that make up the nodes. If `node_size`= `skeleton_size`, the nodes are not visible (but still required to fill the gaps along the skeletons).
 ```
 tracking_visualization.generate_chimerax_skeleton()
 ```
@@ -197,28 +202,39 @@ We will use the frame-to-frame node assignments to draw the tracking vectors for
 
 - `arrow_color`: color of the tracking arrows. Default to black.
 
-- `arrow_size`: diameter of the arrow head. Default to 0.3.
+- `arrow_size`: diameter of the arrow stem.
 ```
 tracking_visualization.generate_tracking_arrows()
 ```
-
 ## 4. Visualize network tracking in ChimeraX
-Now we can combine the visualization files created above to visualize the tracking of timeseries data
+Now we can combine the visualization files created above to visualize the tracking of timelapse data.
+- `show_tif`: if true include fluorescence cloud in background. 
 
-- `show_tif`: if true include fluorescence cloud in background
+- `tif_colors`: color of fluorescence cloud. See [colors](https://www.cgl.ucsf.edu/chimerax/docs/user/commands/colornames.html).
 
-- `use_chimerax_skeleton`: if true use BILD format skeleton which is more flexible but slower to load, if false use mitograph-generated .vtk files of fixed color and size
+- `threshold_level`: if you want to change the contrast/thickness of the fluorescence cloud, use the [level argument](https://www.cgl.ucsf.edu/chimerax/docs/user/commands/volume.html) in ChimeraX.
+
+- `use_chimerax_skeleton`:  
+if true use BILD format skeleton which is more flexible but slower to load;  
+if false use mitograph-generated .vtk files of fixed color and size (not recommended but quicker).
+
+- `skeleton_colors`: same as in step 2.
+
 ```
 tracking_visualization.visualize_tracking()
 ```
+**Open chimerax_visualization/visualize_tracking.cxc in ChimeraX. This may take some time. Click Home -> Backgound -> White to see it better.**
 # Detect Remodeling Events
 **In this section we will detect nodes that undergo fusion or fission events based on the tracking results.**
 
 This is done using a sliding-window approach to identify nodes that undergo persistent structural changes as opposed to transient segmentation differences.  
-First, the fragment indices for each node are recorded for the half_win_size frames before and after the current frame, to form the fragment list.  
+First, the fragment indices for each node are recorded for the `half_win_size frames` before and after the current frame, to form the fragment list.  
 Second, for each network edge, the fragment lists for the connected nodes are compared.  
 Finally, Fission will be declared if the fragment lists before the current frame are strictly identical, as well as the fragment lists after the current frame are strictly non-overlapping. 
 Since fusion events can be considered as fission events reversed in time, the opposite criterion is used for fusion detection. 
+
+Note because of the sliding window approach:  
+`start_frame` must be >= `half_win_size` and `end_frame` must be <= total number of frames - `half_win_size`
 
 Please specify:
 
