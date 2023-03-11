@@ -85,11 +85,11 @@ def plotCascade(rootpath, cell_id, timesteps=4, n_fragments=100, start_frame=0, 
 																fragmentMetrics = fragmentMetrics, n_fragments=n_fragments, 
 																frag_range=frag_range, savepath=savepath, mode=mode)
 		else:
-			tracked_components = GLG.trackFragmentsMaximumVote(graph_object_frame_1, graph_object_frame_2)
+			tracked_components = GLG.trackMaximumVote(graph_object_frame_1, graph_object_frame_2, mode='segment')
 			if t == 0:
 				tracked_reference = tracked_components
 
-		SaveForGIF3D(GLG, graph_object_frame_2, tracked_components, t, n_fragments=n_fragments, 
+		SaveForGIF3D(GLG, graph_object_frame_2, tracked_components, t, n_fragments=n_fragments, plot_reference = True,
 					 frag_range=frag_range, scale=scale, savepath=savepath, tracked_reference=tracked_reference, show=show, view_params=view_params)
 	
 	fragmentMetricsDict = fragmentMetrics
@@ -145,7 +145,7 @@ def plotSnapshot(rootpath, cell_id, timesteps=0, n_fragments=100, start_frame=0,
 
 	tracked_reference = tracked_components
 
-	SaveForGIF3D(GLG, graph_object_frame_2, tracked_components, timesteps, n_fragments=n_fragments, 
+	SaveForGIF3D(GLG, graph_object_frame_2, tracked_components, timesteps, n_fragments=n_fragments, plot_reference = False,
 		frag_range=frag_range, scale=scale, savepath=savepath, tracked_reference=tracked_reference, show=show, view_params=view_params)
 
 def SaveForGIF3D(G, frame_graph, tracked_components, timestep, n_fragments, frag_range, scale, 
@@ -241,37 +241,3 @@ def saveIndividualFragmentMetrics(G, tracked_components, timestep, fragmentMetri
 			fragmentMetrics.append([timestep+1, frag_index, i, list(tracked_components[frag_index][1].graph.nodes()), weighted_centroid[0], weighted_centroid[1], weighted_centroid[2]])
 
 	return fragmentMetrics
-
-if __name__ == '__main__':
-	
-	rootpath = '/media/parth/DATA/Linux_Backup/Projects/CellGraph/gap_closing_with_topology'
-	
-	reachability_dict = defaultdict(lambda : defaultdict(list))
-	reachability_list = [[], [], []]
-	reachability_ratio_dict = defaultdict(list)
-
-	reachabilityArray = []
-	IntersectionArray = []
-	EuclideanArray = []
-
-	font_dir = ['/home/parth/Downloads/Arial']
-	for font in font_manager.findSystemFonts(font_dir):
-		font_manager.fontManager.addfont(font)
-
-	rcParams['font.family'] = 'Arial'
-	rcParams['font.sans-serif'] = ['Arial']
-
-	scales = {'Oligomycin':0.0025, 'DMSO-Control':0.025, 'Nocodazole':0.025, 'MDIVI-1':0.025}
-
-	for i, cell_id in enumerate(glob.glob(rootpath + '/**/*unique*.csv')):
-		cell_id = '/' + '/'.join(cell_id.split('/')[-2:])
-		GLG = GraphLoader(rootpath + cell_id, 'unique')
-		graph_object_frame_0 = GLG.createFrameGraph(frame=0)
-		print(cell_id.split('/')[1])
-		savepath = '/media/parth/DATA/Linux_Backup/Projects/CellGraph/test_images/' + cell_id.split('/')[1] + '/'+ cell_id.split('.')[0][-6:]
-		start_frame=0
-		delta=1
-		timesteps = 60
-		plotCascade(rootpath, cell_id, start_frame=start_frame, timesteps = timesteps, 
-			scale=scales[cell_id.split('/')[1]], n_fragments = 100, frag_range=range(100), delta=delta, 
-			plot_metrics=False, savepath=savepath, mode='cumulative')
