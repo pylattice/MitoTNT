@@ -13,18 +13,12 @@ Or clone the repository on terminal:
 
 ### Python dependencies
 
-- **numpy**
-
-- **scipy**
-
-- **pandas**
-
-- **igraph**
-
-- **fastdist**
-
-To install all packages, open command line and go to the root directory of MitoTNT:  
-
+We will create a conda environment that automatically install all the required dependencies:
+Open anaconda prompt on Windows or just terminal on MacOS/Linux:
+1. Go to the root directory of mitotnt repository
+2. Create the enviroment using the .yml file
 ``
-pip install -r python_dependencies.txt
+conda env create --name mitotnt --file=mitotnt_env.yml
 ``
+
+Before using MitoTNT, do 
