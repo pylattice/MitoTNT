@@ -15,8 +15,8 @@ Or clone the repository on terminal:
 
 We will create a conda environment that automatically install all the required dependencies:
 1. Open anaconda prompt on Windows or just terminal on MacOS/Linux
-2. Go to the root directory of mitotnt repository
-3. Create the enviroment using the .yml file
+2. Go to the root directory of MitoTNT repository
+3. Create the enviroment using the .yml file  
 ``
 conda env create --name mitotnt --file=mitotnt_env.yml
 ``
