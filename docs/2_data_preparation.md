@@ -25,6 +25,8 @@ Note: you need to replace `lateral_pixel_size` and `axial_pixel_size` with micro
 To segment multiple z-stacks for a range of timepoints simultaneously:  
 `for frame in frame*; do MitoGraph -xy lateral_pixel_size -z axial_pixel_size -path "$frame"; done`
 
+**However, processing frames one by one can take long time. We have also provided a utility script `run_MitoGraph_parallel.ipynb` in the helper_scripts directory that can speed up the process 10-20X based on your local machine.**
+
 Segmentation outputs will be saved under each timepoint folder.
 
 Please find the description for the output files [here](https://github.com/vianamp/MitoGraph/#mitograph-outputs).
