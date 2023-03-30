@@ -7,7 +7,7 @@ nav:
     - 'Tracking': '3_tracking.md'
     - 'Visualization': '4_visualization.md'
     - 'Detect fusion/fission': '5_detect_remodeling.md'
-    - 'Post-tracking analysis': '6_post_analysis.md'
+    - 'Post-tracking analysis': '6_post-tracking_analysis.md'
 
 theme:
     name: material
