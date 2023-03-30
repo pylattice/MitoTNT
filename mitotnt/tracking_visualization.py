@@ -18,7 +18,7 @@ def coord_to_str(coord):
 def generate_transformed_tif(data_dir, vis_dir, vis_data_dir,
                              start_frame, end_frame, tracking_interval, voxel_size):
 
-    file_dir = vis_dir+'generate_transformed_tif.cxc'
+    file_dir = vis_dir+'Generate transformed fluorescence (close ChimeraX after process is finished).cxc'
     if os.path.exists(file_dir):
         os.remove(file_dir)
     script = open(file_dir, 'x')
@@ -35,7 +35,7 @@ def generate_transformed_tif(data_dir, vis_dir, vis_data_dir,
 
     script.writelines(commands)
     script.close()
-    print('Load file', file_dir, '\nin ChimeraX to generate transformed tif files for proper visualization')
+    print('Load file', file_dir, '\nin ChimeraX to generate transformed tif files for proper visualization. This only needs to be done once.')
 
 
 skeleton_colors = ['b','r']
@@ -74,10 +74,10 @@ def generate_chimerax_skeleton(input_dir, vis_dir, vis_data_dir,
             bild.close()
     print('Done')
 
-
+        
 def generate_tracking_arrows(input_dir, output_dir, vis_data_dir,
-                             start_frame, end_frame, tracking_interval,
-                             arrow_color='black', arrow_size=0.02):
+                              start_frame, end_frame, tracking_interval,
+                              arrow_color='black', arrow_size=0.02):
 
     inputs = np.load(input_dir+'tracking_inputs.npz', allow_pickle=True)
     full_graph_all_frames = inputs['full_graphs']
@@ -86,7 +86,7 @@ def generate_tracking_arrows(input_dir, output_dir, vis_data_dir,
     linked_nodes = outputs['linked_nodes']
 
     print('Generate tracking arrows in BILD format ...')
-    for index, frame in enumerate(trange(start_frame, end_frame, tracking_interval)):
+    for frame in trange(start_frame, end_frame, tracking_interval):
         arrows = []
         arrows.append('.color '+arrow_color+'\n')
 
@@ -95,28 +95,24 @@ def generate_tracking_arrows(input_dir, output_dir, vis_data_dir,
             os.remove(file_dir)
         bild = open(file_dir, "x")
 
-        try:
-            coords_m = full_graph_all_frames[frame].vs['coordinate']
-            coords_n = full_graph_all_frames[frame+tracking_interval].vs['coordinate']
+        coords_m = full_graph_all_frames[frame].vs['coordinate']
+        coords_n = full_graph_all_frames[frame+tracking_interval].vs['coordinate']
 
-            # create linking vectors for frame m,n
-            linked = linked_nodes[index]
-            for i in range(len(linked)):
-                start, end = linked[i,0], linked[i,1]
-                start_coord = coords_m[start]
-                end_coord = coords_n[end]
+        # create linking vectors for frame m,n
+        linked = linked_nodes[frame-start_frame]
+        for i in range(len(linked)):
+            start, end = linked[i,0], linked[i,1]
+            start_coord = coords_m[start]
+            end_coord = coords_n[end]
 
-                comparison = (start_coord == end_coord)
-                if comparison.all() == True:
-                    end_coord = coords_n[end] + np.random.normal(0, arrow_size, 3)
+            comparison = (start_coord == end_coord)
+            if comparison.all() == True:
+                end_coord = coords_n[end] + np.random.normal(0, arrow_size, 3)
 
-                arrows.append('.arrow '+coord_to_str(start_coord)+coord_to_str(end_coord)+str(arrow_size)+' '+str(arrow_size*2)+' 0.6\n')
+            arrows.append('.arrow '+coord_to_str(start_coord)+coord_to_str(end_coord)+str(arrow_size)+' '+str(arrow_size*2)+' 0.6\n')
 
-            bild.writelines(arrows)
-            bild.close()
-
-        except:
-            bild.close()
+        bild.writelines(arrows)
+        bild.close()
 
     print('Done')
 
@@ -126,7 +122,7 @@ def visualize_tracking(data_dir, input_dir, vis_dir, vis_data_dir,
                        show_tif, tif_colors, threshold_level,
                        use_chimerax_skeleton, skeleton_colors):
 
-    file_dir = vis_dir+'visualize_tracking.cxc'
+    file_dir = vis_dir+'Visualize tracking.cxc'
     if os.path.exists(file_dir):
         os.remove(file_dir)
     script = open(file_dir, 'x')
@@ -144,8 +140,12 @@ def visualize_tracking(data_dir, input_dir, vis_dir, vis_data_dir,
 
         if use_chimerax_skeleton:
             # load chimerax skeleton
-            commands.append('open \"'+vis_data_dir+'frame_'+frame_m+'_chimerax_skeleton_'+skeleton_colors[0]+'.bild\"'+'\n')
-            commands.append('open \"'+vis_data_dir+'frame_'+frame_n+'_chimerax_skeleton_'+skeleton_colors[1]+'.bild\"'+'\n')
+            commands.append('open \"'+vis_data_dir+'frame_'+frame_m+'_chimerax_skeleton_'+skeleton_colors[(idx-1)%len(skeleton_colors)]+'.bild\"'+'\n')
+            commands.append('open \"'+vis_data_dir+'frame_'+frame_n+'_chimerax_skeleton_'+skeleton_colors[(idx)%len(skeleton_colors)]+'.bild\"'+'\n')
+            
+            # commands.append('open \"'+vis_data_dir+'frame_'+frame_m+'_chimerax_skeleton_'+skeleton_colors[0]+'.bild\"'+'\n')
+            # commands.append('open \"'+vis_data_dir+'frame_'+frame_n+'_chimerax_skeleton_'+skeleton_colors[1]+'.bild\"'+'\n')
+ 
         else:
             # load mitograph skeleton
             commands.append('open \"'+data_dir+'frame_'+frame_m+'/frame_'+frame_m+'_skeleton.vtk\"\n')
@@ -154,9 +154,14 @@ def visualize_tracking(data_dir, input_dir, vis_dir, vis_data_dir,
         # load tif
         if show_tif:
             commands.append('open \"'+vis_data_dir+'frame_'+frame_m+'_yflip.cmap\"\n')
-            commands.append('volume #'+str(idx+3)+' color '+tif_colors[0]+' style image '+threshold_level+'\n')
+            commands.append('volume #'+str(idx+3)+' color '+tif_colors[(idx-1)%len(tif_colors)]+' style image '+threshold_level+'\n')
             commands.append('open \"'+vis_data_dir+'frame_'+frame_n+'_yflip.cmap\"\n')
-            commands.append('volume #'+str(idx+4)+' color '+tif_colors[1]+' style image '+threshold_level+'\n')
+            commands.append('volume #'+str(idx+4)+' color '+tif_colors[(idx)%len(tif_colors)]+' style image '+threshold_level+'\n')
+            
+            # commands.append('open \"'+vis_data_dir+'frame_'+frame_m+'_yflip.cmap\"\n')
+            # commands.append('volume #'+str(idx+3)+' color '+tif_colors[0]+' style image '+threshold_level+'\n')
+            # commands.append('open \"'+vis_data_dir+'frame_'+frame_n+'_yflip.cmap\"\n')
+            # commands.append('volume #'+str(idx+4)+' color '+tif_colors[1]+' style image '+threshold_level+'\n')
 
         # combine the models
         if show_tif:
@@ -165,8 +170,9 @@ def visualize_tracking(data_dir, input_dir, vis_dir, vis_data_dir,
             commands.append('rename #'+str(idx)+'-'+str(idx+2)+' id '+str(idx)+'\n')
 
         idx += 1
-
-    commands.append('mseries slider #1-'+str(idx-1))
+    
+    if end_frame - start_frame > 1:
+        commands.append('mseries slider #1-'+str(idx-1))
 
     script.writelines(commands)
     script.close()

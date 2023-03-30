@@ -1,7 +1,0 @@
-numpy
-numba
-matplotlib
-scipy
-pandas
-igraph
-fastdist

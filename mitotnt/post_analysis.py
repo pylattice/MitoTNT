@@ -366,7 +366,6 @@ def map_node_motility_onto_surface(input_dir, output_dir, analy_motility_dir,
 
     for center_frame in selected_frames:
         graph = full_graph_all_frames[center_frame]
-        cc = graph.components()
         num_nodes = len(graph.vs)
 
         node_diffusivity = np.empty(num_nodes)
@@ -429,7 +428,6 @@ def map_segment_motility_onto_surface(input_dir, output_dir, analy_motility_dir,
 
     for center_frame in selected_frames:
         graph = full_graph_all_frames[center_frame]
-        num_nodes = len(graph.vs)
 
         segment_nodes = all_segment_nodes[center_frame]
         num_segs = len(segment_nodes)
@@ -437,7 +435,7 @@ def map_segment_motility_onto_surface(input_dir, output_dir, analy_motility_dir,
         seg_diffusivity = seg_diffusivity_df[seg_diffusivity_df['center_frame_id']==center_frame].diffusivity
 
 
-        print('{} segments are mapped out of total {} nodes\n'.format(np.sum(~np.isnan(seg_diffusivity)), num_segs))
+        print('{} segments are mapped out of total {} segments\n'.format(np.sum(~np.isnan(seg_diffusivity)), num_segs))
 
         # get normalized diffusivity
         d_max = np.nanpercentile(seg_diffusivity, 90)
@@ -477,7 +475,6 @@ def map_fragment_motility_onto_surface(input_dir, output_dir, analy_motility_dir
 
     for center_frame in selected_frames:
         graph = full_graph_all_frames[center_frame]
-        num_nodes = len(graph.vs)
 
         fragment_nodes = graph.components()
         num_frags = len(fragment_nodes)

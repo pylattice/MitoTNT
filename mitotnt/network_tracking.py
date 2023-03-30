@@ -8,6 +8,20 @@ from fastdist import fastdist
 import warnings
 warnings.filterwarnings('ignore')
 
+def list_to_str(list1):
+
+    string = ""
+    if len(list1) == 0:
+        return string
+
+    for i in range(len(list1)-1):
+        string += str(list1[i])
+        string += " "
+    string += str(list1[-1])
+
+    return string
+
+
 def dissimilarity_score(sel_edge_len_m, sel_edge_len_n):
 
     num_edge_diff = len(sel_edge_len_n) - len(sel_edge_len_m)
@@ -22,8 +36,9 @@ def dissimilarity_score(sel_edge_len_m, sel_edge_len_n):
     # fill cost matrix
     for i in range(num_edges):
         for j in range(num_edges):
-            cost_mat[i,j] = abs(sel_edge_len_m[i]-sel_edge_len_n[j]) / max(sel_edge_len_m[i], sel_edge_len_n[j]) # should never have two zeros
-
+            cost_mat[i,j] = abs(sel_edge_len_m[i] - sel_edge_len_n[j]) / max(sel_edge_len_m[i], sel_edge_len_n[j]) # should never have two zeros
+    
+    # solve LAP to find minimum score
     assigned = lap_solver(cost_mat)[1]
     min_sum_cost = 0
     for i in range(num_edges):
@@ -161,18 +176,48 @@ def local_graph_comparison_score(depth, node_i, node_j, contracted_graphs_m, con
 
     return score
 
-def list_to_str(list1):
 
-    string = ""
-    if len(list1) == 0:
-        return string
-
-    for i in range(len(list1)-1):
-        string += str(list1[i])
-        string += " "
-    string += str(list1[-1])
-
-    return string
+def vector_score(node_i, node_j, full_graph_m, full_graph_n):
+    
+    coord_m = full_graph_m.vs[node_i]['coordinate']
+    coord_n = full_graph_n.vs[node_j]['coordinate']
+    linking_vector = coord_m - coord_n
+    
+    neighbors = full_graph_m.vs[node_i].neighbors()
+    if len(neighbors) < 3:
+        
+        skeleton_vector = None
+        if len(neighbors) == 1:
+            skeleton_vector = coord_m - neighbors[0]['coordinate']
+        if len(neighbors) == 2:
+            skeleton_vector = neighbors[1]['coordinate'] - neighbors[0]['coordinate']
+        
+        score = np.linalg.norm(np.cross(skeleton_vector, linking_vector)) / (np.linalg.norm(skeleton_vector) * np.linalg.norm(linking_vector))
+        
+        return score
+    else:
+        return 1.0
+    
+    
+def get_mappings(assignment, segment_nodes, node_to_seg_mapping):
+    node_m_to_seg_n = {} # node to seg mapping for this branch at m
+    seg_n_to_node_m = {} # seg to node mapping for segment at n that this branch links to
+    
+    for node in segment_nodes:
+        linked_node = assignment[node]
+        if linked_node in node_to_seg_mapping.keys(): # node to seg mapping for all branches
+            linked_seg = node_to_seg_mapping[linked_node]
+        else:
+            linked_seg = np.nan
+            
+        node_m_to_seg_n[node] = linked_seg
+        
+        if linked_seg in seg_n_to_node_m.keys():
+            seg_n_to_node_m[linked_seg] += [node]
+        else:
+            seg_n_to_node_m[linked_seg] = [node]
+            
+    return node_m_to_seg_n, seg_n_to_node_m
 
 # =============================================================================
 # FRAME-TO-FRAME TRACKING
@@ -190,37 +235,47 @@ def frametoframe_tracking(input_dir, output_dir, start_frame, end_frame, frame_i
     classic_graph_per_node_all_frames = inputs['classic_graphs_per_node']
     segment_node_all_frames = inputs['segment_nodes']
 
+    # declare useful data holders
     linked_nodes, terminated_nodes, initiated_nodes = [], [], []
     terminated_tracks, ongoing_tracks = [], []
 
-    # declare useful data holders
-    previous_costs = []
     for frame in trange(start_frame, end_frame, tracking_interval, desc='Tracking in progress'):
-
+    
         start = time.time()
         print('\nStart tracking frame {} and {} ...'.format(frame, frame+tracking_interval))
-
+    
         ### Load data ###
-
+        
         # load full graph
         full_graph_m = full_graph_all_frames[frame]
         full_graph_n = full_graph_all_frames[frame+tracking_interval]
         cc_m, cc_n = full_graph_m.components(), full_graph_n.components()
-
+    
         # get number of nodes and coordinates
         number_m, number_n = len(full_graph_m.vs), len(full_graph_n.vs)
         coords_m, coords_n = full_graph_m.vs['coordinate'], full_graph_n.vs['coordinate']
-
+        
+        # warnings for unusual mitograph outputs
+        number_limit = 5000
+        if number_m > number_limit or number_n > number_limit:
+            print('\x1b[31mThe number of nodes is relatively large and may take longer time to process! Recommend to crop a smaller region. Alternatively you can increase node_gap_size during generate_tracking_inputs.generate()\x1b[0m')
+    
+        fluctuation_percent_limit = 20
+        fluctuation_percent = round(abs(number_n - number_m) / number_m, 4) * 100
+        if fluctuation_percent > fluctuation_percent_limit:
+            print('\x1b[31mThe number of node changes by\x1b[0m', '\x1b[31m'+str(fluctuation_percent)+'%\x1b[0m', '\x1b[31mbetween the two frames. This violates conservation of mass. Please check for any imaging or segmentation artifacts.\x1b[0m')
+            
+            
         # get properties
         intensity_m, intensity_n = full_graph_m.vs['intensity'], full_graph_n.vs['intensity']
         width_m, width_n = full_graph_m.vs['width'], full_graph_n.vs['width']
-
+    
         # load contracted graphs
         classic_graphs_m, classic_graphs_n = classic_graph_per_node_all_frames[frame], classic_graph_per_node_all_frames[frame+tracking_interval]
-
+    
         # load nodes for each segment
-        segment_nodes_m, segment_nodes_n = segment_node_all_frames[frame], segment_node_all_frames[frame+tracking_interval]
-
+        all_segment_nodes_m, all_segment_nodes_n = segment_node_all_frames[frame], segment_node_all_frames[frame+tracking_interval]
+    
         # store branching nodes and ignore them for segments
         branching_nodes_m, branching_nodes_n = [], []
         for i in range(number_m):
@@ -229,78 +284,80 @@ def frametoframe_tracking(input_dir, output_dir, start_frame, end_frame, frame_i
         for j in range(number_n):
             if full_graph_n.vs[j].degree() > 2:
                 branching_nodes_n.append(j)
-
+    
         # know which node belongs to which segment
         node_to_segment_m = {}
-        for segment_id, segment in enumerate(segment_nodes_m): # segment consists of of segment nodes
+        for segment_id, segment in enumerate(all_segment_nodes_m): # segment consists of of segment nodes
             for b in segment:
                 if b in branching_nodes_m:
                     node_to_segment_m[b] = np.nan
                 else:
                     node_to_segment_m[b] = segment_id
         node_to_segment_n = {}
-        for segment_id, segment in enumerate(segment_nodes_n): # segment consists of of segment nodes
+        for segment_id, segment in enumerate(all_segment_nodes_n): # segment consists of of segment nodes
             for b in segment:
                 if b in branching_nodes_n:
                     node_to_segment_n[b] = np.nan
                 else:
                     node_to_segment_n[b] = segment_id
         ### Finish data loading ###
-
-
+    
+    
         ### Calculate distance cost matrix ###
         cost_start = time.time()
-
+    
         coords_m_mat = np.array(coords_m); coords_n_mat = np.array(coords_n)
         dist_cost_mat = fastdist.matrix_to_matrix_distance(coords_m_mat, coords_n_mat, fastdist.euclidean, "euclidean")
-
+    
         min_dists = []
-
+    
         for i in range(number_m):
-
+    
             row = dist_cost_mat[i,:]
-
+    
             neighbor_cutoff = sorted(row)[cutoff_num_neighbor]
-
+            
+            # neighbor cutoff
             row[row > neighbor_cutoff] = np.nan
             dist_cost_mat[i,:] = row
-
+    
             min_dists.append(np.nanmin(row))
-
+        
         if cutoff_speed is None:
             speed_cutoff = np.mean(min_dists) + 3 * np.std(min_dists)
         else:
             speed_cutoff = cutoff_speed * frame_interval
-
+            
+        # speed cutoff
         dist_cost_mat[dist_cost_mat > speed_cutoff] = np.nan
-
+    
         valid_node_pairs = np.argwhere(~np.isnan(dist_cost_mat))
         cost_end = time.time()
         print('Distance cost matrix takes {:.2f} s'.format(cost_end - cost_start))
         ### Distance matrix complete ###
-
+    
         ### Calculate topology cost matrix ###
         cost_start = time.time()
-
+    
         topology_cost_mat = np.empty([number_m, number_n])
         topology_cost_mat[:] = np.nan
-
+    
         for i, j in valid_node_pairs:
             topology_cost_mat[i,j] = local_graph_comparison_score(graph_matching_depth, i, j, classic_graphs_m, classic_graphs_n)
-
+    
         cost_end = time.time()
         print('Topology cost matrix takes {:.2f} s'.format(cost_end - cost_start))
         ### Topology matrix complete ###
-
-
+    
+    
         ### Build final cost matrix ###
         # add pseudo-counts for zero scores
         dist_cost_mat += 0.01 * np.nanmax(dist_cost_mat.ravel())
         topology_cost_mat += 0.01 * np.nanmax(topology_cost_mat.ravel())
-
+    
         # construct linking cost matrix based on three matrics and relative scaling
         cost_m_n = dist_cost_mat**dist_exponent * topology_cost_mat**top_exponent
-
+    
         # construct termination cost matrix
         cost_m_m = np.empty([number_m, number_m])
         cost_m_m[:] = np.nan
@@ -309,12 +366,9 @@ def frametoframe_tracking(input_dir, output_dir, start_frame, end_frame, frame_i
             if np.isnan(row).all():
                 cost_m_m[i,i] = 0 # must be assigned to itself since all other nodes exceed max radius
             else:
-                if len(previous_costs) == 0:
-                    min_cost = np.nanmin(row)
-                    cost_m_m[i,i] = 2 * min_cost
-                else:
-                    cost_m_m[i,i] = np.percentile(previous_costs, 98)
-
+                min_cost = np.nanmin(row)
+                cost_m_m[i,i] = 3 * min_cost
+    
         # construct initiation cost matrix
         cost_n_n = np.empty([number_n, number_n])
         cost_n_n[:] = np.nan
@@ -323,146 +377,200 @@ def frametoframe_tracking(input_dir, output_dir, start_frame, end_frame, frame_i
             if np.isnan(column).all():
                 cost_n_n[j,j] = 0 # must be assigned to itself since all other nodes exceed max radius
             else:
-                if len(previous_costs) == 0:
-                    min_cost = np.nanmin(column)
-                    cost_n_n[j,j] = 2 * min_cost
-                else:
-                    cost_n_n[j,j] = np.percentile(previous_costs, 98)
-
+                min_cost = np.nanmin(column)
+                cost_n_n[j,j] = 3 * min_cost
+    
         # construct auxiliary block
         cost_n_m = cost_m_n.T.copy()
         cost_n_m[:] = np.nanmin(cost_m_n) # this matrix is needed for LAP solver but not used for tracking
-
+    
         # assemble into one matrix
         left_block = np.concatenate((cost_m_n, cost_n_n), axis=0)
         right_block = np.concatenate((cost_m_m, cost_n_m), axis=0)
         cost_matrix = np.concatenate((left_block, right_block), axis=1)
         cost_matrix[np.isnan(cost_matrix)] = np.inf # blocking values
         ### Final matrix is complete ###
-
+    
         ### Solve LAP ###
         assignment = lap_solver(cost_matrix)[1]
-
-        ### Filter out unlikely links ###
-        # find linked nodes at frame m, n
-        assigned_m = assignment[:number_m]
-
+    
+        ## Filter out unlikely links ###
+        assigned_m = assignment[:number_m] # find linked nodes at frame m, n
+        
         linked_m, linked_n = [], []
         for i in range(len(assigned_m)):
             if assigned_m[i] < number_n:
-                linked_m.append(i) # first being index for frame t and second for frame t+tracking_interval
+                linked_m.append(i)
                 linked_n.append(assigned_m[i])
-
+                
+        print('# linked:', len(linked_m))
         filtered_nodes = []
-        for full_segment in segment_nodes_m: # segment consists of of segment nodes
-
+        count_norm, count_neigh = 0, 0
+        for segment_id in range(len(all_segment_nodes_m)): # segment consists of of segment nodes
+        
+            segment_nodes_m = all_segment_nodes_m[segment_id]
+            
             # find only linked nodes in the segment
-            segment_nodes = np.array([node for node in full_segment if node in linked_m and node not in branching_nodes_m])
+            current_seg_nodes_m = np.array([node for node in segment_nodes_m if node in linked_m and node not in branching_nodes_m])
+            
+            if len(current_seg_nodes_m) == 0:
+                continue
+            
+            # useful mappings
+            node_m_to_seg_n, seg_n_to_node_m = get_mappings(assignment, current_seg_nodes_m, node_to_segment_n)
+                    
+            # node count of each segment
+            node_count_per_seg = {}
+            for seg_id in seg_n_to_node_m.keys():
+                node_count_per_seg[seg_id] = len(seg_n_to_node_m[seg_id])
+        
+            max_segment_id = max(node_count_per_seg, key=node_count_per_seg.get)
+        
+        
+            # first, filter by displacement vector norm
+            majority_nodes = seg_n_to_node_m[max_segment_id]
+            try:
+                mean_majority_dist = np.mean([dist_cost_mat[i,j] for i,j in list(zip(majority_nodes, [assignment[n] for n in majority_nodes]))])
+            except:
+                print(number_m, number_n, seg_n_to_node_m, majority_nodes)
+            other_nodes = [n for n in current_seg_nodes_m if n not in majority_nodes]
+            for node in other_nodes:
+                if dist_cost_mat[node, assignment[node]] > 3 * mean_majority_dist: # cutoff is here
+                    filtered_nodes.append(node)
+                    count_norm += 1
 
-            if len(segment_nodes) > 0:
-                # find the assigned nodes at frame n
-                assigned_nodes = np.array([assignment[n] for n in segment_nodes])
+            # second, remove outlier arrows pointing to other segments without any neighbor that does the same
+            # update the segment nodes but remember the seg to node mapping in inaccurate
+            current_seg_nodes_m = [n for n in current_seg_nodes_m if n not in filtered_nodes]
+            node_m_to_seg_n, seg_n_to_node_m = get_mappings(assignment, current_seg_nodes_m, node_to_segment_n)
+            if len(current_seg_nodes_m) == 0:
+                continue
 
-                # find the seg id of the assigned nodes
-                assigned_segment_ids = []
-                for n in assigned_nodes:
-                    if n in node_to_segment_n.keys():
-                        assigned_segment_ids.append(node_to_segment_n[n])
-                    else: # if the node doesn't belong to any segment (lone node)
-                        assigned_segment_ids.append(np.nan)
-                assigned_segment_ids = np.array(assigned_segment_ids)
+            for node in current_seg_nodes_m:
+                seg_id = node_m_to_seg_n[node]
+                if np.isnan(seg_id):
+                    continue
+                elif seg_id != max_segment_id:
+                    neighs = full_graph_m.neighbors(node)
+                    count = np.sum([neigh in seg_n_to_node_m[seg_id] for neigh in neighs])
+                    if count == 0: # if no neigh pointing to the same segment
+                        filtered_nodes.append(node)
+                        count_neigh += 1
 
-                # seg id to node mapping
-                seg_to_nodes = {}
-                for index, segment_id in enumerate(assigned_segment_ids):
-                    if segment_id not in seg_to_nodes.keys():
-                        seg_to_nodes[segment_id] = [segment_nodes[index]]
+            # third, force crossing arrows to align with the swing
+            current_seg_nodes_m = [n for n in current_seg_nodes_m if n not in filtered_nodes]
+            node_m_to_seg_n, seg_n_to_node_m = get_mappings(assignment, current_seg_nodes_m, node_to_segment_n)
+            if len(current_seg_nodes_m) == 0:
+                continue
+
+            for seg_id in seg_n_to_node_m.keys():
+
+                if np.isnan(seg_id):
+                    continue
+
+                current_nodes = seg_n_to_node_m[seg_id] # nodes point to the same segment
+                assigned_nodes = [assignment[node] for node in current_nodes]
+                current_coords = [full_graph_m.vs[node]['coordinate'] for node in current_nodes]
+                assigned_coords = [full_graph_n.vs[node]['coordinate'] for node in assigned_nodes]
+                current_coords = np.array(current_coords)
+                assigned_coords = np.array(assigned_coords)
+                
+                if len(current_coords) < 3:
+                    continue
+                
+                linking_vectors = assigned_coords - current_coords
+
+                mean_vector = np.mean(linking_vectors, axis=0)
+
+                angles = []
+                concerted_node_idx, outlier_node_idx = [], []
+                for node_idx, linking_vector in enumerate(linking_vectors):
+                    angle = np.arccos(np.linalg.norm(np.dot(mean_vector, linking_vector)) \
+                    / (np.linalg.norm(mean_vector) * np.linalg.norm(linking_vector)))
+
+                    angles.append(angle)
+                    angle_cutoff = min(3*np.std(angles), np.pi/4)
+                    
+                    if angle <= angle_cutoff:
+                        concerted_node_idx.append(node_idx)
                     else:
-                        seg_to_nodes[segment_id] += [segment_nodes[index]]
+                        outlier_node_idx.append(node_idx)
 
-                # node count of each segment
-                counts = {}
-                for segment_id in assigned_segment_ids:
-                    if segment_id not in counts.keys():
-                        counts[segment_id] = 1
-                    else:
-                        counts[segment_id] += 1
+                if len(concerted_node_idx) == 0:
+                    continue
 
-                max_segment_id = max(counts, key=counts.get)
+                reference_vector = np.mean(linking_vectors[concerted_node_idx], axis=0)
 
-                if counts[max_segment_id] == 1:
-                    filtered_nodes += list(segment_nodes)
+                concerted_nodes_n = [assigned_nodes[n] for n in concerted_node_idx]
+                outlier_nodes_m = [current_nodes[n] for n in outlier_node_idx]
+                for outlier_node_m in outlier_nodes_m:
+                    expected_position = full_graph_m.vs[outlier_node_m]['coordinate'] + reference_vector
+                    distance = np.linalg.norm(assigned_coords - expected_position, axis=1)
+                    closest_nodes = [assigned_nodes[n] for n in np.argsort(distance)[:2]]
 
-                else:
-                    # filter by displacement vector norm
-                    majority_nodes = segment_nodes[assigned_segment_ids == max_segment_id]
-                    mean_majority_dist = np.mean([dist_cost_mat[i,j] for i,j in list(zip(majority_nodes, [assignment[n] for n in majority_nodes]))])
-                    other_nodes = [n for n in segment_nodes if n not in majority_nodes]
-                    for node in other_nodes:
-                        if dist_cost_mat[node, assignment[node]] > 3 * mean_majority_dist: # cutoff is here
-                            filtered_nodes.append(node)
-
-                    # remove outliers pointing to other segments without partners
-                    unremoved_nodes = [n for n in segment_nodes if n not in filtered_nodes]
-                    for index, node in enumerate(unremoved_nodes):
-                        seg_id = assigned_segment_ids[index]
-                        if np.isnan(seg_id):
-                            continue
-                        elif seg_id != max_segment_id:
-                            neighs = full_graph_m.neighbors(node)
-                            count = np.sum([neigh in seg_to_nodes[seg_id] for neigh in neighs])
-                            if count == 0: # if no neigh pointing to the same segment
-                                filtered_nodes.append(node)
-
-        # print('Number of filtered nodes is', len(filtered_nodes))
+                    for node_n in closest_nodes:
+                        if node_n not in concerted_nodes_n and node_n != assignment[outlier_node_m]:
+                            assignment[assignment==node_n] = number_n + 1 # terminate old assignment
+                            assignment[outlier_node_m] = node_n # correct assignment
+                            concerted_nodes_n.append(node_n) # avoid overwrite assignment
+                            break
+        
+        print('# filtered nodes each step:', count_norm, count_neigh, len(linked_m) - len(filtered_nodes))
 
         # update assignment after filtering
         assignment_filtered = assignment.copy()
-
+    
         for index_m in filtered_nodes:
             index_n = linked_n[linked_m.index(index_m)]
             # set the linked node to initated
             assignment_filtered[number_m + index_n] = index_n
             # set the node to terminated
             assignment_filtered[index_m] = number_n + index_m
-        ### Unlikely links are filtered ###
-
+        # Unlikely links are filtered ###
+    
         ### Report assignments ###
         # interpretate assignment
         assigned_m, assigned_n = assignment_filtered[:number_m], assignment_filtered[number_m:]
-
+    
         linked, terminated, initiated = [], [], []
         for i in range(len(assigned_m)):
             if assigned_m[i] < number_n:
                 linked.append([i, assigned_m[i]]) # first being index for frame t and second for frame t+tracking_interval
             else:
                 terminated.append(i)
-
+    
         for i in range(len(assigned_n)):
             if assigned_n[i] < number_n:
                 initiated.append(i)
-
+    
         linked = np.array(linked); terminated = np.array(terminated); initiated = np.array(initiated)
         linked_nodes.append(linked); terminated_nodes.append(terminated); initiated_nodes.append(initiated)
-
-        assignment_dist = [dist_cost_mat[a,b] for (a,b) in linked]
-        previous_costs += list(cost_matrix[np.arange(number_m), assignment[:number_m]])
-        avg_cost = cost_matrix[np.arange(number_m),assignment[:number_m]].sum() / number_m
+    
+        dist_cost_assigned = [dist_cost_mat[a,b] for (a,b) in linked]
+        
         end = time.time()
-
+    
         # output stats
         print('Number of nodes at frame {}, {} are {}, {}'.format(frame, frame+tracking_interval, number_m, number_n))
         print('Number of nodes linked, terminated at frame {}: {}, {}'.format(frame, len(linked), len(terminated)))
         print('Number of nodes initiated at frame {}: {}'.format(frame+tracking_interval, len(initiated)))
-        print('Mean, std of distances for tracked nodes: {:2f}, {:2f}'.format(np.mean(assignment_dist), np.std(assignment_dist)))
-        print('Average cost: {:.1f}'.format(avg_cost))
-        print('Tracking is complete and takes {:.2f} s\n'.format(end - start))
+        
+        max_linked = min(number_m, number_n)
+        percent_linked = round(len(linked) / max_linked, 4) * 100
+        if percent_linked < 70:
+            print('\x1b[31mOnly '+str(percent_linked)+'% of the '+str(max_linked)+' nodes are tracked. This is likely due to large distance or inconsistent topology between the mitochondria at the two frames.\x1b[0m')
+    
+        print('Mean speed for tracked nodes: {:2f} μm/s'.format(np.nanmean(dist_cost_assigned) / frame_interval))
+        if np.mean(dist_cost_assigned) / frame_interval >= 1.0:
+            print('\x1b[31mThe mean node speed is greater than 1 μm/s. This is unrealitically fast and tracking may be unreliable!\x1b[0m')
+                  
+        print('Tracking was complete and took {:.2f} s\n'.format(end - start))
         ### Assignments reported ###
-
+    
         ### Update tracks ###
         nodes_m, nodes_n = linked[:,0].tolist(), linked[:,1].tolist()
         tracks_to_remove = []
-
+    
         if frame == start_frame:
             for i in range(len(nodes_m)):
                 # initiate with first two frames
@@ -473,7 +581,7 @@ def frametoframe_tracking(input_dir, output_dir, start_frame, end_frame, frame_i
                                        [coords_m[nodes_m[i]], coords_n[nodes_n[i]]],
                                        [intensity_m[nodes_m[i]], intensity_n[nodes_n[i]]],
                                        [width_m[nodes_m[i]], width_n[nodes_n[i]]],])
-
+    
         else:
             for idx, track in enumerate(ongoing_tracks):
                 # if terminated, remove track; else append linked node
@@ -490,10 +598,10 @@ def frametoframe_tracking(input_dir, output_dir, start_frame, end_frame, frame_i
                     track[4].append(coords_n[linked_node])
                     track[5].append(intensity_n[linked_node])
                     track[6].append(width_n[linked_node])
-
+    
         # delete terminated tracks from ongoing tracks
         ongoing_tracks = [t for i,t in enumerate(ongoing_tracks) if i not in tracks_to_remove]
-
+    
         for init_node in initiated:
             ongoing_tracks.append([[frame+tracking_interval],
                                    [init_node],
@@ -502,7 +610,7 @@ def frametoframe_tracking(input_dir, output_dir, start_frame, end_frame, frame_i
                                    [coords_n[init_node]],
                                    [intensity_n[init_node]],
                                    [width_n[init_node]]])
-
+    
     ### Save frame-to-frame tracking ###
     path = output_dir+'frametoframe_tracking_outputs.npz'
     data = {}
@@ -510,6 +618,7 @@ def frametoframe_tracking(input_dir, output_dir, start_frame, end_frame, frame_i
     data['terminated_nodes'] = np.array(terminated_nodes, dtype=object)
     data['initiated_nodes'] = np.array(initiated_nodes, dtype=object)
     np.savez(path, **data)
+
 
     # each element in all_tracks is a track with 1) frame numbers; 2) node indices; 3) segment ids of the node, 4) frag ids of the node; 4) node coords; 5) node intensities; 6) node widths
     terminated_tracks = np.array(terminated_tracks, dtype=object)
@@ -715,9 +824,9 @@ def gap_closing(input_dir, output_dir, start_frame, end_frame, tracking_interval
           len(all_closed_tracks), np.mean([len(track[0]) for track in all_closed_tracks])))
 
 
-    # Save tracks in the form of one node per row ###
+    # save tracks in the form of one node per row
     print('Saving final node trajectory file ... This might take a few minutes for large files.\n')
-    tracks = pd.DataFrame(columns={'frame_id', 'unique_node_id', 'frame_node_id', 'frame_seg_id', 'frame_frag_id', 'x', 'y', 'z','intensity','width'})
+    tracks = pd.DataFrame(columns=['frame_id', 'unique_node_id', 'frame_node_id', 'frame_seg_id', 'frame_frag_id', 'x', 'y', 'z','intensity','width'])
     tracks = tracks[['frame_id', 'unique_node_id', 'frame_node_id', 'frame_seg_id', 'frame_frag_id', 'x', 'y', 'z','intensity','width']] # reorder the columns
 
     df_index = 0
@@ -727,13 +836,30 @@ def gap_closing(input_dir, output_dir, start_frame, end_frame, tracking_interval
         for f in range(len(track_frames)):
             x, y, z = track_coords[f][0], track_coords[f][1], track_coords[f][2]
             tracks.loc[df_index] = {'frame_id': track_frames[f], 'unique_node_id': track_id,
-                            'frame_node_id': track_nodes[f], 'frame_seg_id': track_segs[f], 'frame_frag_id': track_frags[f],
-                            'x': x, 'y': y, 'z': z, 'intensity': track_ints[f], 'width': track_widths[f]}
+                                    'frame_node_id': track_nodes[f], 'frame_seg_id': track_segs[f], 'frame_frag_id': track_frags[f],
+                                    'x': x, 'y': y, 'z': z, 'intensity': track_ints[f], 'width': track_widths[f]}
             df_index += 1
 
     tracks.sort_values(['unique_node_id', 'frame_id'], inplace=True, ignore_index=True)
 
-    # add connected nodes using unique indexing #
+    # add connected nodes using unique indexing
+    def find_connected_unique_nodes(this_node, visited_nodes): # recursive node finding
+
+        neighs = full_graph.neighbors(this_node)
+        for visited_node in visited_nodes:
+            if visited_node in neighs:
+                neighs.remove(visited_node)
+
+        visited_nodes.append(this_node)
+
+        for neigh in neighs:
+            # if the frame node is tracked for this frame, add to list
+            if neigh in tracked_frame_nodes:
+                connected_unique_nodes.append(frame_to_unique[neigh])
+            else:
+                find_connected_unique_nodes(neigh, visited_nodes)
+        return
+        
     new_tracks = pd.DataFrame()
     for frame in range(start_frame, end_frame, tracking_interval):
 
@@ -744,22 +870,6 @@ def gap_closing(input_dir, output_dir, start_frame, end_frame, tracking_interval
         unique_nodes = tracks_frame['unique_node_id'].astype('int').tolist()
         frame_to_unique = {tracked_frame_nodes[i]:unique_nodes[i] for i in range(len(tracks_frame))}
 
-        def find_connected_unique_nodes(this_node, visited_nodes):
-
-            neighs = full_graph.neighbors(this_node)
-            for visited_node in visited_nodes:
-                if visited_node in neighs:
-                    neighs.remove(visited_node)
-
-            visited_nodes.append(this_node)
-
-            for neigh in neighs:
-                # if the frame node is tracked for this frame, add to list
-                if neigh in tracked_frame_nodes:
-                    connected_unique_nodes.append(frame_to_unique[neigh])
-                else:
-                    find_connected_unique_nodes(neigh, visited_nodes)
-            return
 
         all_connected_unique_nodes = []
         for node in tracked_frame_nodes:
@@ -774,4 +884,4 @@ def gap_closing(input_dir, output_dir, start_frame, end_frame, tracking_interval
     new_tracks = new_tracks[['frame_id', 'unique_node_id', 'frame_node_id', 'frame_seg_id', 'frame_frag_id', 'connected_unique_node_id', 'x', 'y', 'z', 'intensity', 'width']]
     new_tracks.to_csv(output_dir+'final_node_tracks.csv', index=False)
 
-    print('File saved. Tracking is complete.')
+    print('Tracking was complete and files were saved!')
