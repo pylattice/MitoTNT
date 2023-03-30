@@ -5,7 +5,7 @@ It is built upon mitochondria segmentation provided by MitoGraph, and visualizat
 
 MitoTNT is written by Zichen (Zachary) Wang (ziw056@ucsd.edu), with the help from people in the [Johannes Schöneberg lab](https://www.schoeneberglab.org/) at UCSD.
 
-![type:video](./contents/home_page_movie.mp4)
+![type:video](./docs/contents/home_page_movie.mp4)
 # Installation
 On github, download this [repository](https://github.com/pylattice/mitoTNT). Alternative clone the repository on terminal: 
 `git clone https://github.com/pylattice/mitoTNT.git`  
@@ -54,6 +54,8 @@ Note: you need to replace `lateral_pixel_size` and `axial_pixel_size` with micro
 
 To segment multiple z-stacks for a range of timepoints simultaneously:  
 `for frame in frame*; do MitoGraph -xy lateral_pixel_size -z axial_pixel_size -path "$frame"; done`
+
+**However, processing frames one by one can take long time. We have also provided a utility script `run_MitoGraph_parallel.ipynb` in the helper_scripts directory that can speed up the process 10-20X based on your local machine.**
 
 Segmentation outputs will be saved under each timepoint folder.
 
