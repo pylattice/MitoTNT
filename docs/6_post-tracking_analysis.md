@@ -1,4 +1,4 @@
-# Post Analysis
+# Post-tracking Analysis
 ## Motility Measurements
 **In this section we will use the tracking results to compute diffusivity at three levels of description and visualize motility in space.**
 
@@ -32,7 +32,7 @@ post_analysis.compute_fragment_diffusivity()
 ```
 
 The data is saved in `analy_motility_dir/*diffusivity.csv` files. Each row is a node/segment/fragment. The columns are explained below.
-### Columns
+#### Columns
 
  - `center_frame_id`: selected frame for determining the segment/fragment diffusivity. N/A for node diffusivity.
  
@@ -45,3 +45,18 @@ The data is saved in `analy_motility_dir/*diffusivity.csv` files. Each row is a 
  - `r_squared`: coefficient of determination for the linear regression.
 
  - `num_points`: number of points in MSD vs. time delay curve used for linear regression.
+
+## Motility Visualization
+**Now we can visualize the computed motility measurements by mapping diffusivity values onto corresponding mitochondrial skeleton nodes with different coloring.**
+
+- `node_size`: the size scale of the nodes
+- `selected_frames`: the frames for which the skeleton is to be used for visualization. Each frame will produce its own visualization files. All tracks that include this frame will be shown.
+
+To color diffusivity for the tracks that include the selected frames, use:
+```
+post_analysis.map_node_motility_onto_surface()
+
+post_analysis.map_segment_motility_onto_surface()
+
+post_analysis.map_fragment_motility_onto_surface()
+```
