@@ -10,13 +10,10 @@ On github, download this [repository](https://github.com/pylattice/mitoTNT). Alt
 - **[ChimeraX](https://www.cgl.ucsf.edu/chimerax/)** for tracking visualization
 
 ### Python dependencies
-
-We will create a conda environment that automatically install all the required dependencies:  
+We will create a conda environment that automatically installs all the required dependencies.  
 1. Open anaconda prompt on Windows or just terminal on MacOS/Linux  
 2. Go to the root directory of MitoTNT repository  
-3. Create the enviroment using the .yml file  
-``
-conda env create --name mitotnt --file=mitotnt_env.yml
-``
+3. Create the enviroment using the provided .yml file: `conda env create --name mitotnt --file=mitotnt_env.yml`  
 
-Before using MitoTNT, do `conda activate mitotnt` and then open notebook with `jupyter notebook`.
+
+To use MitoTNT, first activate the environmnet we created with `conda activate mitotnt`, and then open notebook with `jupyter notebook`.
