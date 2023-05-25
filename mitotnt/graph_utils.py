@@ -220,10 +220,10 @@ class GraphLoader:
 					for node in set(fragment[0].graph.nodes()).intersection(set(fragment[1].graph.nodes()))]))
 				fragment1RG = np.sqrt(np.sum(((fragment1PositionArray - fragment1Centroid)**2).reshape(3, -1))/fragment[0].length)
 				MeanRGArray.append(fragment1RG)
-		frame_labels = ['Radius of Gyration', 'Mean Displacement per Fragment', 
+		frame_labels = ['Radius of Gyration', 'Mean Displacement', 
 						'Mean Fragment Intensity', 'Mean Fragment Width',
 						'Density', 'Average Degree', 'Average Shortest Path Length',
-						'Network Efficiency', 'Fragment Length', 'Temporal Intersection']
+						'Network Efficiency', 'Fragment Size', 'Temporal Intersection']
 		MeanIntensityNode = sum([(fragment[0].intensityDict[node]) \
 			for node in list(set(fragment[0].graph.nodes()))])/(len(list(set(fragment[0].graph.nodes()))) + np.finfo(float).eps)
 		MeanWidthNode = sum([(fragment[0].widthDict[node]) \
@@ -236,8 +236,8 @@ class GraphLoader:
 		temporalIntersection = (len(list(set(fragment[0].graph) & set(fragment[1].graph))) + 1)/(len(list(set(fragment[0].graph))) + 1)
 
 		return (frame_labels, np.array([np.nanmean(MeanRGArray), np.nanmean(MeanDisplacementArray), 
-			MeanIntensityNode, MeanWidthNode, density, averageDegree, averagePath,
-			eff, fragment[0].length, temporalIntersection]))
+			    MeanIntensityNode, MeanWidthNode, density, averageDegree, averagePath,
+			    eff, fragment[0].length, temporalIntersection]))
 
 	def trackFragmentsBipartite(self, frame_graph_obj_1, frame_graph_obj_2, threshold=0.2, maintain_fused=False):
 		connectedComponents1 = {'A' + str(i): c for i, c in enumerate(sorted(nx.connected_components(frame_graph_obj_1.graph), key=len, reverse=True))}
@@ -295,7 +295,7 @@ class GraphLoader:
 		B = {k:set().union(*[connectedComponents2[n] for n in CC[k] if n[0] == 'B']) for k in sorted(CC.keys())}
 		self.consistent_graph = {'A' + k[1:]:v for k,v in connectedComponents2.items()}
 		return {k:(GraphObject.createFromSubgraph(frame_graph_obj_1.graph.subgraph(list(A.get(k))).copy(), frame_graph_obj_1), 
-			GraphObject.createFromSubgraph(frame_graph_obj_2.graph.subgraph(list(B.get(k))).copy(), frame_graph_obj_2)) for k, v in sorted(CC.items(), key=lambda x: len(x[1]), reverse=True)}
+			    GraphObject.createFromSubgraph(frame_graph_obj_2.graph.subgraph(list(B.get(k))).copy(), frame_graph_obj_2)) for k, v in sorted(CC.items(), key=lambda x: len(x[1]), reverse=True)}
 
 	def trackMaximumVote(self, frame_graph_obj_1, frame_graph_obj_2, inverted=False, threshold=5, level='segment'):
 		
@@ -310,7 +310,7 @@ class GraphLoader:
 			connectedComponents2 = {i: set([x for x in frame_graph_obj_2.fragmentDict if frame_graph_obj_2.fragmentDict[x] == f]) \
 								for i, f in enumerate(frame_graph_obj_2.fragmentDict)}
 		else:
-			raise ValueError("Only implemented for level = 'segment' or 'fragment'")
+			raise ValueError("Only implemented for 'segment' or 'fragment'")
 		
 		connectedComponents1 = {x[0]:x[1] for x in sorted(connectedComponents1.items(), key=lambda k: len(k[1]), reverse=True)}
 		connectedComponents1 = {i: connectedComponents1[k] for i, k in enumerate(connectedComponents1) if len(connectedComponents1[k])}
@@ -353,4 +353,4 @@ class GraphLoader:
 			 for c in superFragments2], dtype = object), np.array([GraphObject.createFromSubgraph(frame_graph_obj_1.graph.subgraph(list(c)).copy(), frame_graph_obj_1) 
 			for c in superFragments1], dtype = object)))
 		return {k:(GraphObject.createFromSubgraph(frame_graph_obj_1.graph.subgraph(list(superFragments1.get(k))).copy(), frame_graph_obj_1), 
-			GraphObject.createFromSubgraph(frame_graph_obj_2.graph.subgraph(list(superFragments2.get(k))).copy(), frame_graph_obj_2)) for k, v in superFragments2.items()}
+			    GraphObject.createFromSubgraph(frame_graph_obj_2.graph.subgraph(list(superFragments2.get(k))).copy(), frame_graph_obj_2)) for k, v in superFragments2.items()}
