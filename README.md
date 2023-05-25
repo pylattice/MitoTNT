@@ -34,7 +34,7 @@ MitoGraph can be installed [here](https://github.com/vianamp/MitoGraph/#how-to-i
 ## 2. Save 3D image stacks in individual directories
 If your data is 4D image stacks, you will need to save it into 3D image stacks for individual timepoints.
 Each 3D image stack also needs to be placed in its own folder.
-**We have provided a utility script `prepare_tif_for_mitograph.ipynb ` in the helper_scripts directory for this purpose.**
+**We have provided a utility script `convert_file_for_MitoGraph.ipynb ` in the helper_scripts directory for this purpose.**
 
 Example directory structure:
 
