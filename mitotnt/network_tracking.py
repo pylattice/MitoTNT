@@ -617,14 +617,14 @@ def frametoframe_tracking(input_dir, output_dir, start_frame, end_frame, frame_i
     data['linked_nodes'] = np.array(linked_nodes, dtype=object)
     data['terminated_nodes'] = np.array(terminated_nodes, dtype=object)
     data['initiated_nodes'] = np.array(initiated_nodes, dtype=object)
-    # np.savez(path, **data)
+    np.savez(path, **data)
 
 
     # each element in all_tracks is a track with 1) frame numbers; 2) node indices; 3) segment ids of the node, 4) frag ids of the node; 4) node coords; 5) node intensities; 6) node widths
     terminated_tracks = np.array(terminated_tracks, dtype=object)
     ongoing_tracks = np.array(ongoing_tracks, dtype=object)
     all_tracks = np.concatenate([terminated_tracks, ongoing_tracks])
-    # np.save(output_dir+'all_tracks.npy', np.array(all_tracks, dtype=object))
+    np.save(output_dir+'all_tracks.npy', np.array(all_tracks, dtype=object))
     ### tracking saved ###
 
 
@@ -815,7 +815,7 @@ def gap_closing(input_dir, output_dir, start_frame, end_frame, tracking_interval
     else:
         all_closed_tracks = all_tracks
 
-    # np.save(output_dir+'all_closed_tracks.npy', np.array(all_closed_tracks, dtype=object))
+    np.save(output_dir+'all_closed_tracks.npy', np.array(all_closed_tracks, dtype=object))
 
     print('Number of tracks and average track length before gap closing: {}, {:.2f}\n'.format(
           len(all_tracks), np.mean([len(track[0]) for track in all_tracks])))
