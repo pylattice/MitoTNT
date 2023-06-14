@@ -66,7 +66,7 @@ def find_site_nodes(graph, event_edges, max_edge_gap=5):
 
     return all_site_nodes
 
-def detect(input_dir, output_dir,
+def detect(input_dir, output_dir, analy_remodeling_dir,
            start_frame, end_frame,
            stride_size=1, half_win_size=4, min_tracked_frames=2):
 
@@ -112,7 +112,7 @@ def detect(input_dir, output_dir,
             # find the unique id for tracked nodes on this fragment
             frag_unique_nodes = [frame_to_unique[f] for f in frag_frame_nodes]
 
-            # FISSION EVENTS
+            # for fission events (fusion is reverse)
             forward_track_node_list, backward_track_node_list = [], []
             forward_track_frag_list, backward_track_frag_list = [], []
             for track_id in frag_unique_nodes:
@@ -284,11 +284,11 @@ def detect(input_dir, output_dir,
 
     event_list = pd.DataFrame.from_dict(event_list)
     event_list.sort_values('frame_id', inplace=True)
-    event_list.to_csv(output_dir+'remodeling_events.csv', index=False)
+    event_list.to_csv(analy_remodeling_dir+'remodeling_events.csv', index=False)
 
     node_list = pd.DataFrame.from_dict(node_list)
     node_list.sort_values('frame_id', inplace=True)
-    node_list.to_csv(output_dir+'remodeling_nodes.csv', index=False)
+    node_list.to_csv(analy_remodeling_dir+'remodeling_nodes.csv', index=False)
 
-    print('The data is saved at', output_dir+'remodeling_events.csv')
-    print('The data is saved at', output_dir+'remodeling_nodes.csv')
+    print('The data is saved at', analy_remodeling_dir+'remodeling_events.csv')
+    print('The data is saved at', analy_remodeling_dir+'remodeling_nodes.csv')
