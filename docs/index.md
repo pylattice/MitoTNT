@@ -4,5 +4,3 @@
 It is built upon mitochondria segmentation provided by MitoGraph, and visualization engine provided by ChimeraX.  
 
 MitoTNT is written by Zichen (Zachary) Wang (ziw056@ucsd.edu), with the help from people in the [Johannes Schöneberg lab](https://www.schoeneberglab.org/) at UCSD.
-
-![type:video](./contents/home_page_movie.mp4)
