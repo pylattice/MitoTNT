@@ -307,35 +307,35 @@ def frametoframe_tracking(input_dir, output_dir, start_frame, end_frame, frame_i
         cost_start = time.time()
     
         coords_m_mat = np.array(coords_m); coords_n_mat = np.array(coords_n)
-        dist_cost_mat = fastdist.matrix_to_matrix_distance(coords_m_mat, coords_n_mat, fastdist.euclidean, "euclidean")
+        dist_cost_mat = fastdist.matrix_to_matrix_distance(coords_m_mat, coords_n_mat, fastdist.euclidean, 'euclidean')
     
         min_dists = []
     
+        # neighbor cutoff
         for i in range(number_m):
     
             row = dist_cost_mat[i,:]
-    
             neighbor_cutoff = sorted(row)[cutoff_num_neighbor]
             
-            # neighbor cutoff
             row[row > neighbor_cutoff] = np.nan
             dist_cost_mat[i,:] = row
     
             min_dists.append(np.nanmin(row))
         
+        # displacement cutoff
         if cutoff_speed is None:
-            speed_cutoff = np.mean(min_dists) + 3 * np.std(min_dists)
+            disp_cutoff = np.mean(min_dists) + 3 * np.std(min_dists) # global estimate based on all nodes
         else:
-            speed_cutoff = cutoff_speed * frame_interval
+            disp_cutoff = cutoff_speed * frame_interval
             
-        # speed cutoff
-        dist_cost_mat[dist_cost_mat > speed_cutoff] = np.nan
+        dist_cost_mat[dist_cost_mat > disp_cutoff] = np.nan
     
         valid_node_pairs = np.argwhere(~np.isnan(dist_cost_mat))
         cost_end = time.time()
         print('Distance cost matrix takes {:.2f} s'.format(cost_end - cost_start))
         ### Distance matrix complete ###
     
+
         ### Calculate topology cost matrix ###
         cost_start = time.time()
     
@@ -562,7 +562,7 @@ def frametoframe_tracking(input_dir, output_dir, start_frame, end_frame, frame_i
     
         print('Mean speed for tracked nodes: {:2f} μm/s'.format(np.nanmean(dist_cost_assigned) / frame_interval))
         if np.mean(dist_cost_assigned) / frame_interval >= 1.0:
-            print('\x1b[31mThe mean node speed is greater than 1 μm/s. This is unrealitically fast and tracking may be unreliable!\x1b[0m')
+            print('\x1b[31mThe mean node speed is greater than 1 μm/s. This is extremely fast and tracking may be unreliable!\x1b[0m')
                   
         print('Tracking was complete and took {:.2f} s\n'.format(end - start))
         ### Assignments reported ###
@@ -733,7 +733,7 @@ def gap_closing(input_dir, output_dir, start_frame, end_frame, tracking_interval
                 track_cost_m_m[i,i] = 0 # must be assigned to itself since all other nodes exceed max radius
             else:
                 min_cost = np.nanmin(row)
-                track_cost_m_m[i,i] = 2 * min_cost
+                track_cost_m_m[i,i] = 3 * min_cost
 
         # assemble into one matrix
         track_cost_matrix = np.concatenate((track_cost_m_n, track_cost_m_m), axis=1)

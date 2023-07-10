@@ -286,9 +286,9 @@ def detect(input_dir, output_dir, analy_remodeling_dir,
     event_list.sort_values('frame_id', inplace=True)
     event_list.to_csv(analy_remodeling_dir+'remodeling_events.csv', index=False)
 
-    node_list = pd.DataFrame.from_dict(node_list)
-    node_list.sort_values('frame_id', inplace=True)
-    node_list.to_csv(analy_remodeling_dir+'remodeling_nodes.csv', index=False)
+#     node_list = pd.DataFrame.from_dict(node_list)
+#     node_list.sort_values('frame_id', inplace=True)
+#     node_list.to_csv(analy_remodeling_dir+'remodeling_nodes.csv', index=False)
 
     print('The data is saved at', analy_remodeling_dir+'remodeling_events.csv')
-    print('The data is saved at', analy_remodeling_dir+'remodeling_nodes.csv')
+#     print('The data is saved at', analy_remodeling_dir+'remodeling_nodes.csv')
