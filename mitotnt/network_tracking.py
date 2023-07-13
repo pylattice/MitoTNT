@@ -403,7 +403,6 @@ def frametoframe_tracking(input_dir, output_dir, start_frame, end_frame, frame_i
                 linked_m.append(i)
                 linked_n.append(assigned_m[i])
                 
-        print('# linked:', len(linked_m))
         filtered_nodes = []
         count_norm, count_neigh = 0, 0
         for segment_id in range(len(all_segment_nodes_m)): # segment consists of of segment nodes
@@ -431,13 +430,11 @@ def frametoframe_tracking(input_dir, output_dir, start_frame, end_frame, frame_i
             majority_nodes = seg_n_to_node_m[max_segment_id]
             try:
                 mean_majority_dist = np.mean([dist_cost_mat[i,j] for i,j in list(zip(majority_nodes, [assignment[n] for n in majority_nodes]))])
-            except:
-                print(number_m, number_n, seg_n_to_node_m, majority_nodes)
-            other_nodes = [n for n in current_seg_nodes_m if n not in majority_nodes]
-            for node in other_nodes:
-                if dist_cost_mat[node, assignment[node]] > 3 * mean_majority_dist: # cutoff is here
-                    filtered_nodes.append(node)
-                    count_norm += 1
+                other_nodes = [n for n in current_seg_nodes_m if n not in majority_nodes]
+                for node in other_nodes:
+                    if dist_cost_mat[node, assignment[node]] > 3 * mean_majority_dist: # cutoff is here
+                        filtered_nodes.append(node)
+                        count_norm += 1
 
             # second, remove outlier arrows pointing to other segments without any neighbor that does the same
             # update the segment nodes but remember the seg to node mapping in inaccurate
@@ -515,7 +512,7 @@ def frametoframe_tracking(input_dir, output_dir, start_frame, end_frame, frame_i
                             concerted_nodes_n.append(node_n) # avoid overwrite assignment
                             break
         
-        print('# filtered nodes each step:', count_norm, count_neigh, len(linked_m) - len(filtered_nodes))
+        # print('# filtered nodes each step:', count_norm, count_neigh, len(linked_m) - len(filtered_nodes))
 
         # update assignment after filtering
         assignment_filtered = assignment.copy()
