@@ -99,7 +99,7 @@ def generate_tracking_arrows(input_dir, output_dir, vis_data_dir,
         coords_n = full_graph_all_frames[frame+tracking_interval].vs['coordinate']
 
         # create linking vectors for frame m,n
-        linked = linked_nodes[frame-start_frame]
+        linked = linked_nodes[frame]
         for i in range(len(linked)):
             start, end = linked[i,0], linked[i,1]
             start_coord = coords_m[start]
