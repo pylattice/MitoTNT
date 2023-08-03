@@ -404,7 +404,6 @@ def frametoframe_tracking(input_dir, output_dir, start_frame, end_frame, frame_i
                 linked_n.append(assigned_m[i])
                 
         filtered_nodes = []
-        count_norm, count_neigh = 0, 0
         for segment_id in range(len(all_segment_nodes_m)): # segment consists of of segment nodes
         
             segment_nodes_m = all_segment_nodes_m[segment_id]
@@ -427,17 +426,18 @@ def frametoframe_tracking(input_dir, output_dir, start_frame, end_frame, frame_i
         
         
             # first, filter by displacement vector norm
-            majority_nodes = seg_n_to_node_m[max_segment_id]
-            try:
-                mean_majority_dist = np.mean([dist_cost_mat[i,j] for i,j in list(zip(majority_nodes, [assignment[n] for n in majority_nodes]))])
-                other_nodes = [n for n in current_seg_nodes_m if n not in majority_nodes]
-                for node in other_nodes:
-                    if dist_cost_mat[node, assignment[node]] > 3 * mean_majority_dist: # cutoff is here
-                        filtered_nodes.append(node)
-                        count_norm += 1
+            majority_nodes_m = seg_n_to_node_m[max_segment_id]
+            linked_majority_nodes_m = [n for n in majority_nodes_m if assignment[n] < number_n]
+            other_nodes_m = [n for n in current_seg_nodes_m if n not in linked_majority_nodes_m]
+            linked_other_nodes_m = [n for n in other_nodes_m if assignment[n] < number_n]
+
+            mean_majority_dist = np.mean([dist_cost_mat[i,j] for i,j in list(zip(linked_majority_nodes_m, [assignment[n] for n in linked_majority_nodes_m]))])
+
+            for node in linked_other_nodes_m:
+                if dist_cost_mat[node, assignment[node]] > 3 * mean_majority_dist: # cutoff is here
+                    filtered_nodes.append(node)
 
             # second, remove outlier arrows pointing to other segments without any neighbor that does the same
-            # update the segment nodes but remember the seg to node mapping in inaccurate
             current_seg_nodes_m = [n for n in current_seg_nodes_m if n not in filtered_nodes]
             node_m_to_seg_n, seg_n_to_node_m = get_mappings(assignment, current_seg_nodes_m, node_to_segment_n)
             if len(current_seg_nodes_m) == 0:
@@ -452,9 +452,8 @@ def frametoframe_tracking(input_dir, output_dir, start_frame, end_frame, frame_i
                     count = np.sum([neigh in seg_n_to_node_m[seg_id] for neigh in neighs])
                     if count == 0: # if no neigh pointing to the same segment
                         filtered_nodes.append(node)
-                        count_neigh += 1
 
-            # third, force crossing arrows to align with the swing
+            # third, correct crossing arrows to align with the overall direction of the branch
             current_seg_nodes_m = [n for n in current_seg_nodes_m if n not in filtered_nodes]
             node_m_to_seg_n, seg_n_to_node_m = get_mappings(assignment, current_seg_nodes_m, node_to_segment_n)
             if len(current_seg_nodes_m) == 0:
@@ -512,8 +511,6 @@ def frametoframe_tracking(input_dir, output_dir, start_frame, end_frame, frame_i
                             concerted_nodes_n.append(node_n) # avoid overwrite assignment
                             break
         
-        # print('# filtered nodes each step:', count_norm, count_neigh, len(linked_m) - len(filtered_nodes))
-
         # update assignment after filtering
         assignment_filtered = assignment.copy()
     
@@ -839,8 +836,8 @@ def gap_closing(input_dir, output_dir, start_frame, end_frame, tracking_interval
 
     tracks.sort_values(['unique_node_id', 'frame_id'], inplace=True, ignore_index=True)
 
-    # add connected nodes using unique indexing
-    def find_connected_unique_nodes(this_node, visited_nodes): # recursive node finding
+    # define a recursive node finding function to construct tracked network bys kipping untracked nodes
+    def find_connected_unique_nodes(this_node, visited_nodes): 
 
         neighs = full_graph.neighbors(this_node)
         for visited_node in visited_nodes:
@@ -857,6 +854,7 @@ def gap_closing(input_dir, output_dir, start_frame, end_frame, tracking_interval
                 find_connected_unique_nodes(neigh, visited_nodes)
         return
         
+    # add connected nodes using unique indexing
     new_tracks = pd.DataFrame()
     for frame in range(start_frame, end_frame, tracking_interval):
 
