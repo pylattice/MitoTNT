@@ -176,28 +176,6 @@ def local_graph_comparison_score(depth, node_i, node_j, contracted_graphs_m, con
 
     return score
 
-
-def vector_score(node_i, node_j, full_graph_m, full_graph_n):
-    
-    coord_m = full_graph_m.vs[node_i]['coordinate']
-    coord_n = full_graph_n.vs[node_j]['coordinate']
-    linking_vector = coord_m - coord_n
-    
-    neighbors = full_graph_m.vs[node_i].neighbors()
-    if len(neighbors) < 3:
-        
-        skeleton_vector = None
-        if len(neighbors) == 1:
-            skeleton_vector = coord_m - neighbors[0]['coordinate']
-        if len(neighbors) == 2:
-            skeleton_vector = neighbors[1]['coordinate'] - neighbors[0]['coordinate']
-        
-        score = np.linalg.norm(np.cross(skeleton_vector, linking_vector)) / (np.linalg.norm(skeleton_vector) * np.linalg.norm(linking_vector))
-        
-        return score
-    else:
-        return 1.0
-    
     
 def get_mappings(assignment, segment_nodes, node_to_seg_mapping):
     node_m_to_seg_n = {} # node to seg mapping for this branch at m
@@ -238,7 +216,13 @@ def frametoframe_tracking(input_dir, output_dir, start_frame, end_frame, frame_i
     # declare useful data holders
     linked_nodes, terminated_nodes, initiated_nodes = [], [], []
     terminated_tracks, ongoing_tracks = [], []
-
+    
+    num_frames = len(full_graph_all_frames)
+    if end_frame >= num_frames:
+        print('The end frame specified is less than the number of frames in tracking inputs! End frame is changed to the maximum number of frames present.')
+    
+    end_frame = num_frames - 1
+    
     for frame in trange(start_frame, end_frame, tracking_interval, desc='Tracking in progress'):
     
         start = time.time()

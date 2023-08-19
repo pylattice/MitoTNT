@@ -104,17 +104,73 @@ def generate(data_dir, input_dir,
              start_frame, end_frame,
              node_gap_size=0):
 
-    ### read mitograph outputs to create 1) full-resolution graphs with node and edge attributes, 2) segment nodes ###
+    ### read mitograph outputs to create 1) classic graphs, 2) full-resolution graphs with node and edge attributes, 3) segment nodes, 4) classic graphs per node ###
+    
+    # 1) classic graphs
+    all_classic_graphs = []
+    for frame in trange(start_frame, end_frame+1, desc='Classic graphs in progress'):
+        
+        classic_graph = ig.Graph()
+
+        network_nodes = np.loadtxt(data_dir+'frame_'+str(frame)+'/frame_'+str(frame)+'.coo')
+        
+        edge_list = np.loadtxt(data_dir+'frame_'+str(frame)+'/frame_'+str(frame)+'.gnet', skiprows=1)
+        
+        bulk_nodes = pd.read_csv(data_dir+'frame_'+str(frame)+'/frame_'+str(frame)+'.txt', delimiter='\t')
+        
+        coords = round_coord(network_nodes)
+
+        classic_graph.add_vertices(len(coords))
+        
+        # create all the network nodes
+        line_ids = np.unique(bulk_nodes['line_id'])
+
+        for line in line_ids:
+            line_nodes = bulk_nodes[bulk_nodes['line_id']==line]
+            line_nodes = line_nodes.reset_index()
+            end_index = len(line_nodes) - 1
+
+            # get branching and terminal nodes to contruct graph
+            coord_end_a = round_coord(line_nodes.loc[0, 'x':'z'])
+            coord_end_b = round_coord(line_nodes.loc[end_index, 'x':'z'])
+
+            # find index of network nodes in .coo based on coords
+            index_end_a = coord_to_node(coords, coord_end_a)
+            index_end_b = coord_to_node(coords, coord_end_b)
+
+            node_end_a = classic_graph.vs[index_end_a]
+            node_end_a['index'] = node_end_a.index
+            node_end_a['coordinate'] = line_nodes.loc[0, 'x':'z'].to_numpy()
+            node_end_a['intensity'] = line_nodes.loc[0, 'pixel_intensity']
+            node_end_a['width'] = line_nodes.loc[0, 'width_(um)']
+
+            node_end_b = classic_graph.vs[index_end_b]
+            node_end_b['index'] = node_end_b.index
+            node_end_b['coordinate'] = line_nodes.loc[end_index, 'x':'z'].to_numpy()
+            node_end_b['intensity'] = line_nodes.loc[end_index, 'pixel_intensity']
+            node_end_b['width'] = line_nodes.loc[end_index, 'width_(um)']
+        
+        for edge in edge_list:
+            node_end_a, node_end_b, distance = int(edge[0]), int(edge[1]), edge[2]
+            classic_graph.add_edge(node_end_a, node_end_b, distance=distance)
+
+        all_classic_graphs.append(classic_graph)
+    
+    all_classic_graphs = np.array(all_classic_graphs, dtype=object)
+
+    
+    # 2) full-resolution graphs with node and edge attributes + 3) segment nodes
     all_full_graphs = []
     all_segment_nodes = []
-
     for frame in trange(start_frame, end_frame+1, desc='Full-resolution graphs in progress'):
+        
         full_graph = ig.Graph()
 
         raw_coords = np.loadtxt(data_dir+'frame_'+str(frame)+'/frame_'+str(frame)+'.coo')
-        coords = round_coord(raw_coords)
-
+        
         bulk_nodes = pd.read_csv(data_dir+'frame_'+str(frame)+'/frame_'+str(frame)+'.txt', delimiter='\t')
+        
+        coords = round_coord(raw_coords)
 
         # create all the network nodes
         full_graph.add_vertices(len(coords))
@@ -181,7 +237,6 @@ def generate(data_dir, input_dir,
                     segment_nodes.append(index_end_b) # get the node index of another end
                     frame_segment_nodes.append(segment_nodes) # finish this segment
 
-        # print(list(full_graph.vs['index']))
         full_graph.simplify(combine_edges='sum') # remove self-loops, and combine multiple edges if needed
 
         all_full_graphs.append(full_graph)
@@ -190,9 +245,9 @@ def generate(data_dir, input_dir,
     all_full_graphs = np.array(all_full_graphs, dtype=object)
     all_segment_nodes = np.array(all_segment_nodes, dtype=object)
 
-    ### use full-resolution graphs to obtain classic graphs around each node ###
-    all_contracted_graphs = []
-    for frame in trange(start_frame, end_frame+1, desc='Classic graphs in progress'):
+    # 4) classic graphs around each node
+    all_classic_graphs_per_node = []
+    for frame in trange(start_frame, end_frame+1, desc='Classic graphs per node in progress'):
 
         # load graphs of nodes and edges
         full_graph = all_full_graphs[frame]
@@ -203,7 +258,7 @@ def generate(data_dir, input_dir,
         all_frags = full_graph.components()
 
         # contract edges and update frag and return new root index
-        frame_contracted_graphs = []
+        frame_classic_graphs_per_node = []
         for node_index in range(total_num_nodes):
 
             # use full graph node id
@@ -213,18 +268,19 @@ def generate(data_dir, input_dir,
             root = frag.vs['index'].index(node_index)
 
             # call function for edge contraction
-            contracted_graph = contract_edges(frag, root)
-            frame_contracted_graphs.append(contracted_graph)
+            classic_graph = contract_edges(frag, root)
+            frame_classic_graphs_per_node.append(classic_graph)
 
-        all_contracted_graphs.append(frame_contracted_graphs)
+        all_classic_graphs_per_node.append(frame_classic_graphs_per_node)
 
-    all_contracted_graphs = np.array(all_contracted_graphs, dtype=object)
+    all_classic_graphs_per_node = np.array(all_classic_graphs_per_node, dtype=object)
 
     ### save all inputs as a single compressed .npz file ###
     path = input_dir+'tracking_inputs.npz'
     data = {}
+    data['classic_graphs'] = all_classic_graphs
     data['full_graphs'] = all_full_graphs
-    data['classic_graphs_per_node'] = all_contracted_graphs
     data['segment_nodes'] = all_segment_nodes
+    data['classic_graphs_per_node'] = all_classic_graphs_per_node
 
     np.savez(path, **data)

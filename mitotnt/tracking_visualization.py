@@ -15,28 +15,6 @@ def coord_to_str(coord):
         string = string + str(np.round(s,3)) + ' '
     return string
 
-def generate_transformed_tif(data_dir, vis_dir, vis_data_dir,
-                             start_frame, end_frame, tracking_interval, voxel_size):
-
-    file_dir = vis_dir+'Generate transformed fluorescence (close ChimeraX after process is finished).cxc'
-    if os.path.exists(file_dir):
-        os.remove(file_dir)
-    script = open(file_dir, 'x')
-    commands = []
-
-    for frame in range(start_frame, end_frame+tracking_interval, tracking_interval):
-
-        fid = str(frame)
-        commands.append('close\n')
-        commands.append('open \"'+data_dir+'frame_'+fid+'/frame_'+fid+'.tif\"\n')
-        commands.append('volume #1 voxelSize '+voxel_size+'\n')
-        commands.append('volume flip #1 axis y\n')
-        commands.append('save \"'+vis_data_dir+'frame_'+fid+'_yflip.cmap\" #2\n')
-
-    script.writelines(commands)
-    script.close()
-    print('Load file', file_dir, '\nin ChimeraX to generate transformed tif files for proper visualization. This only needs to be done once.')
-
 
 skeleton_colors = ['b','r']
 def generate_chimerax_skeleton(input_dir, vis_dir, vis_data_dir,
@@ -118,8 +96,8 @@ def generate_tracking_arrows(input_dir, output_dir, vis_data_dir,
 
 
 def visualize_tracking(data_dir, input_dir, vis_dir, vis_data_dir,
-                       start_frame, end_frame, tracking_interval,
-                       show_tif, tif_colors, threshold_level,
+                       start_frame, end_frame, tracking_interval, 
+                       show_tif, voxel_size, tif_colors, threshold_level, 
                        use_chimerax_skeleton, skeleton_colors):
 
     file_dir = vis_dir+'Visualize tracking.cxc'
@@ -140,11 +118,9 @@ def visualize_tracking(data_dir, input_dir, vis_dir, vis_data_dir,
 
         if use_chimerax_skeleton:
             # load chimerax skeleton
-            commands.append('open \"'+vis_data_dir+'frame_'+frame_m+'_chimerax_skeleton_'+skeleton_colors[(idx-1)%len(skeleton_colors)]+'.bild\"'+'\n')
-            commands.append('open \"'+vis_data_dir+'frame_'+frame_n+'_chimerax_skeleton_'+skeleton_colors[(idx)%len(skeleton_colors)]+'.bild\"'+'\n')
+            commands.append('open \"'+vis_data_dir+'frame_'+frame_m+'_chimerax_skeleton_'+skeleton_colors[0]+'.bild\"'+'\n')
+            commands.append('open \"'+vis_data_dir+'frame_'+frame_n+'_chimerax_skeleton_'+skeleton_colors[1]+'.bild\"'+'\n')
             
-            # commands.append('open \"'+vis_data_dir+'frame_'+frame_m+'_chimerax_skeleton_'+skeleton_colors[0]+'.bild\"'+'\n')
-            # commands.append('open \"'+vis_data_dir+'frame_'+frame_n+'_chimerax_skeleton_'+skeleton_colors[1]+'.bild\"'+'\n')
  
         else:
             # load mitograph skeleton
@@ -153,22 +129,29 @@ def visualize_tracking(data_dir, input_dir, vis_dir, vis_data_dir,
 
         # load tif
         if show_tif:
-            commands.append('open \"'+vis_data_dir+'frame_'+frame_m+'_yflip.cmap\"\n')
-            commands.append('volume #'+str(idx+3)+' color '+tif_colors[(idx-1)%len(tif_colors)]+' style image '+threshold_level+'\n')
-            commands.append('open \"'+vis_data_dir+'frame_'+frame_n+'_yflip.cmap\"\n')
-            commands.append('volume #'+str(idx+4)+' color '+tif_colors[(idx)%len(tif_colors)]+' style image '+threshold_level+'\n')
+            # frame_m
+            commands.append('open \"'+data_dir+'frame_'+frame_m+'/frame_'+frame_m+'.tif\"\n')
+            commands.append('volume #'+str(idx+3)+' voxelSize '+voxel_size+'\n')
+            commands.append('volume flip #'+str(idx+3)+' axis y\n')
+            commands.append('close #'+str(idx+3)+'\n')
+            commands.append('rename #'+str(idx+4)+' id #'+str(idx+3)+'\n')
+            commands.append('volume #'+str(idx+3)+' color '+tif_colors[0]+' style image '+threshold_level+'\n')
             
-            # commands.append('open \"'+vis_data_dir+'frame_'+frame_m+'_yflip.cmap\"\n')
-            # commands.append('volume #'+str(idx+3)+' color '+tif_colors[0]+' style image '+threshold_level+'\n')
-            # commands.append('open \"'+vis_data_dir+'frame_'+frame_n+'_yflip.cmap\"\n')
-            # commands.append('volume #'+str(idx+4)+' color '+tif_colors[1]+' style image '+threshold_level+'\n')
-
+            # frame_n
+            commands.append('open \"'+data_dir+'frame_'+frame_n+'/frame_'+frame_n+'.tif\"\n')
+            commands.append('volume #'+str(idx+4)+' voxelSize '+voxel_size+'\n')
+            commands.append('volume flip #'+str(idx+4)+' axis y\n')
+            commands.append('close #'+str(idx+4)+'\n')
+            commands.append('rename #'+str(idx+5)+' id #'+str(idx+4)+'\n')
+            commands.append('volume #'+str(idx+4)+' color '+tif_colors[1]+' style image '+threshold_level+'\n')
+            
+            
         # combine the models
         if show_tif:
             commands.append('rename #'+str(idx)+'-'+str(idx+4)+' id '+str(idx)+'\n')
         else:
             commands.append('rename #'+str(idx)+'-'+str(idx+2)+' id '+str(idx)+'\n')
-
+            
         idx += 1
     
     if end_frame - start_frame > 1:
