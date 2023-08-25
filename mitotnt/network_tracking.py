@@ -820,7 +820,7 @@ def gap_closing(input_dir, output_dir, start_frame, end_frame, tracking_interval
 
     tracks.sort_values(['unique_node_id', 'frame_id'], inplace=True, ignore_index=True)
 
-    # define a recursive node finding function to construct tracked network bys kipping untracked nodes
+    # define a recursive node finding function to construct tracked network by skipping untracked nodes
     def find_connected_unique_nodes(this_node, visited_nodes): 
 
         neighs = full_graph.neighbors(this_node)
