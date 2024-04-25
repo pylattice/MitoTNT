@@ -14,8 +14,8 @@ theme:
     palette:
         primary: orange
         accent: red
-    logo: contents/logo.png
-    favicon: contents/logo.png
+    logo: contents/mitotnt_logo.png
+    favicon: contents/mitotnt_logo.png
     
 plugins:
     - mkdocs-video
