@@ -12,8 +12,8 @@ nav:
 theme:
     name: material
     palette:
-        primary: orange
-        accent: red
+        primary: white
+        accent: orange
     logo: contents/mitotnt_logo.png
     favicon: contents/mitotnt_logo.png
     
