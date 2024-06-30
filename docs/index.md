@@ -1,5 +1,5 @@
 # MitoTNT: Mitochondrial Temporal Network Tracking
-**MitoTNT** is a Python-based pipeline for the tracking, visualization, and dynamic analysis of 4D mitochondrial network data.
+**MitoTNT** is a Python-based pipeline for the tracking, visualization, and analysis of 4D mitochondrial network data.
 
 It is built upon mitochondria segmentation provided by MitoGraph, and visualization engine provided by ChimeraX.  
 
