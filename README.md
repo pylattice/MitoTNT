@@ -31,7 +31,7 @@ Example dataset has been provided under `test_data/mitograph`, which are MitoGra
 
 ## 1. Convert 4D movie to 3D stacks
 If your data is a 4D hyperstack, you will need to save it into 3D image stacks for all timepoints.
-We have provided a utility script `convert_to_tiff.ipynb ` under `helper_scripts` directory for this purpose.
+We have provided a utility script `convert_to_tiff.ipynb` under `helper_scripts` directory for this purpose.
 
 ## 2. Extract single cell patches for all timepoints
 MitoGraph and MitoTNT usually work with mitochondria in a single cell. This helps to avoid tracking mitochondria across different cells and reduces the computational time significantly.
