@@ -4,15 +4,16 @@
 It is built upon mitochondria segmentation provided by MitoGraph, and visualization engine provided by ChimeraX.  
 
 MitoTNT is written by Zichen (Zachary) Wang (ziw056@ucsd.edu), with the help from people in the [Johannes Schöneberg lab](https://www.schoeneberglab.org/) at UCSD.
+
 # Installation
-On github, download this [repository](https://github.com/pylattice/mitoTNT). Alternative clone the repository on terminal: 
+On github, download this [repository](https://github.com/pylattice/MitoTNT). Alternative clone the repository on terminal: 
 `git clone https://github.com/pylattice/mitoTNT.git`  
 
 ### Software requirements
 - **[Jupyter Notebook](https://jupyter.org/)** or get it from **[Anaconda](https://www.anaconda.com/products/distribution)**
 
 - **[MitoGraph](https://github.com/vianamp/MitoGraph/)** for mitochondria segmentation.  
- Note that MitoGraph is currently only available on MacOS, but you can build it from source on Linux. Please contact ziw056@ucsd.edu if you need the Linux build.
+ Note that MitoGraph is currently only available on MacOS and Windows, but you can build it from source on Linux. Please contact ziw056@ucsd.edu if you need the Linux build.
 
 - **[ChimeraX](https://www.cgl.ucsf.edu/chimerax/)** for tracking visualization
 
@@ -22,19 +23,19 @@ We will create a conda environment that automatically installs all the required 
 2. Go to the root directory of MitoTNT repository  
 3. Create the enviroment using the provided .yml file: `conda env create --name mitotnt --file=mitotnt_env.yml`  
 
-
 To use MitoTNT, first activate the environmnet we created with `conda activate mitotnt`, and then open notebook with `jupyter notebook`.
+
 # Data Preparation
 **To perform tracking, mitochondria 3D image stacks needs to be segmented using MitoGraph for all time points.**
 Example dataset has been provided under `test_data/mitograph`, which are MitoGraph-segmented. You can skip this section if using the example dataset.
 
 ## 1. Cell segmentation
-MitoGraph and MitoTNT usually work with mitochondria in a single cell. This helps to avoid tracking mitochondria across different cells and reduces the computational time significantly. Z-stacks with pixel size around 200-300 should be processed in reasonable amount of time. For this reason, single cell z-stacks need to be prepared. There are a vast number of cell segmentation tools available, noticeably [Cellpose](https://www.cellpose.org). We have also included two cell segmentation scripts under `helper_scripts` directory, using either chosen ROI or watershed segmentation based on the cell membrane channel. 
+MitoGraph and MitoTNT usually work with mitochondria in a single cell. This helps to avoid tracking mitochondria across different cells and reduces the computational time significantly. For this reason, single cell z-stacks need to be prepared. We have included a sample cell segmentation scripts `crop_image_using_ImageJ_ROI` under `helper_scripts` directory, where it can read ImageJ ROI files to extract single cell patches for each timepoint. The users need to draw rectangular boxes in ImageJ and save as `.roi` selection files under a ROI folder for each movie.
 
 ## 2. Save 3D image stacks in individual directories
 If your data is 4D image stacks, you will need to save it into 3D image stacks for individual timepoints.
 Each 3D image stack also needs to be placed in its own folder.
-We have provided a utility script `convert_file_for_MitoGraph.ipynb ` under the `helper_scripts` directory for this purpose.
+We have provided a utility script `convert_to_tiff.ipynb ` under `helper_scripts` directory for this purpose.
 
 Example directory structure:
 
@@ -48,19 +49,18 @@ To run MitoGraph on **command line** for one snapshot:
 `MitoGraph -xy lateral_pixel_size -z axial_pixel_size -path tif_dir`  
 Note: you need to replace `lateral_pixel_size` and `axial_pixel_size` with microscope parameters, otherwise the segmentation is empty
 
-To segment multiple z-stacks for a range of timepoints simultaneously:  
+To segment multiple z-stacks for a number of timepoints simultaneously:  
 `for frame in frame*; do MitoGraph -xy lateral_pixel_size -z axial_pixel_size -path "$frame"; done`
-
-**However, processing frames one by one can take long time. We have also provided a utility script `run_MitoGraph_parallel.ipynb` in the helper_scripts directory that can speed up the process 10-20X based on your local machine.**
 
 Segmentation outputs will be saved under each timepoint folder.
 
 Please find the description for the output files [here](https://github.com/vianamp/MitoGraph/#mitograph-outputs).
 
 ## 4. Check segmentation results
-We recommend using [ChimeraX](https://www.cgl.ucsf.edu/chimerax/) to open `.tif` and `.vtk` files for visual inspection of the segmentation results.
+We recommend using [ChimeraX](https://www.cgl.ucsf.edu/chimerax/) or [ParaView](https://www.paraview.org/) to open `.tif` and `.vtk` files for visual inspection of the segmentation results.
 
-More information for using MitoGraph and selecting parameters can be found in the publication [here](https://doi.org/10.1016/j.ab.2018.02.022).
+More information for using MitoGraph and parameters can be found in the publication [here](https://doi.org/10.1016/j.ab.2018.02.022).
+
 # Network Tracking
 Open the terminal and type `jupyter notebook` to start Jupyter Notebook.  
 Find the root directory of MitoTNT and open `mitotnt_tracking_pipeline.ipynb` for mitochondrial network tracking.
@@ -205,6 +205,7 @@ if false use mitograph-generated .vtk files of fixed color and size (not recomme
 tracking_visualization.visualize_tracking()
 ```
 **Open chimerax_visualization/visualize_tracking.cxc in ChimeraX. This may take some time. Click Home -> Backgound -> White to see it better.**
+
 # Detect Remodeling Events
 **In this section we will detect nodes that undergo fusion or fission events based on the tracking results.**
 
@@ -252,6 +253,7 @@ Columns in the output:
 - `unique_node_id`: the `unique_node_id` for each detected node
 
 `frame_node_id`, `frame_frag_id`, `unique_node_id` are as defined in the node tracking outputs
+
 # Post-tracking Analysis
 ## Motility Measurements
 **In this section we will use the tracking results to compute diffusivity at three levels of description and visualize motility in space.**
