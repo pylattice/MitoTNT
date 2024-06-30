@@ -2,20 +2,22 @@
 **To perform tracking, mitochondria 3D image stacks needs to be segmented using MitoGraph for all time points.**
 Example dataset has been provided under `test_data/mitograph`, which are MitoGraph-segmented. You can skip this section if using the example dataset.
 
-## 1. Cell segmentation
-MitoGraph and MitoTNT usually work with mitochondria in a single cell. This helps to avoid tracking mitochondria across different cells and reduces the computational time significantly. For this reason, single cell z-stacks need to be prepared. We have included a sample cell segmentation scripts `crop_image_using_ImageJ_ROI.ipynb` under `helper_scripts` directory, where it can read ImageJ ROI files to extract single cell patches for each timepoint. The users need to draw rectangular boxes in ImageJ and save as `.roi` selection files under a ROI folder for each movie.
-
-## 2. Save 3D image stacks in individual directories
-If your data is 4D image stacks, you will need to save it into 3D image stacks for individual timepoints.
-Each 3D image stack also needs to be placed in its own folder.
+## 1. Convert 4D movie to 3D stacks
+If your data is a 4D hyperstack, you will need to save it into 3D image stacks for all timepoints.
 We have provided a utility script `convert_to_tiff.ipynb ` under `helper_scripts` directory for this purpose.
 
-Example directory structure:
+## 2. Extract single cell patches for all timepoints
+MitoGraph and MitoTNT usually work with mitochondria in a single cell. This helps to avoid tracking mitochondria across different cells and reduces the computational time significantly.
+Also, in order to run MitoGraph for each 3D stack, we want to place it under a separate folder at the given timepoint.
+
+Directory structure:
 
 - frame_0/frame_0.tif
 
 - frame_1/frame_1.tif  
   ......
+  
+We have included a sample cell segmentation script `crop_image_using_ImageJ_ROI.ipynb` under `helper_scripts` directory, where it can read ImageJ ROI files to extract single cell patches for each timepoint. The users need to draw rectangular boxes in ImageJ and save as `.roi` selection files under a ROI folder for the movie.
  
 ## 3. Run mitochondria segmentation
 To run MitoGraph on **command line** for one snapshot:  
