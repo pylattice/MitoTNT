@@ -10,12 +10,12 @@ On github, download this [repository](https://github.com/pylattice/MitoTNT). Alt
 `git clone https://github.com/pylattice/mitoTNT.git`  
 
 ### Software requirements
-- **[Jupyter Notebook](https://jupyter.org/)** or get it from **[Anaconda](https://www.anaconda.com/products/distribution)**
+- **[Jupyter Notebook](https://jupyter.org/)** or get it from **[Anaconda](https://www.anaconda.com/products/distribution)**.
 
 - **[MitoGraph](https://github.com/vianamp/MitoGraph/)** for mitochondria segmentation.  
  Note that MitoGraph is currently only available on MacOS and Windows, but you can build it from source on Linux. Please contact ziw056@ucsd.edu if you need the Linux build.
 
-- **[ChimeraX](https://www.cgl.ucsf.edu/chimerax/)** for tracking visualization
+- **[ChimeraX](https://www.cgl.ucsf.edu/chimerax/)** for tracking visualization.
 
 ### Python dependencies
 We will create a conda environment that automatically installs all the required dependencies.  
