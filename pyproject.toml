@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mitotnt"
+version = "0.1.0"
+description = "Python toolkit for analyzing temporal dynamics of mitochondrial networks"
+
+authors = [
+    { name="Zachary Wang", email="ziw056@ucsd.edu" }
+]
+readme = "docs/quick_start.md"
+license = {file = "LICENSE"}
+requires-python = ">=3.9"
+
+# Core dependencies (from your env file)
+dependencies = [
+    "numpy>=1.22",
+    "scipy>=1.8",
+    "pandas>=1.4",
+    "matplotlib>=3.5",
+    "scikit-image>=0.19",
+    "tifffile",
+    "igraph",
+    "fastdist",
+    "aicsimageio",
+    "tqdm",
+    "numba",
+    "jupyter",         # optional, but included since it was in env
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "black",
+    "flake8",
+]
+
+[project.urls]
+"Homepage" = "https://mitotnt.org"
+"Documentation" = "https://zichenzachwang.github.io/MitoTNT/"

@@ -1,0 +1,28 @@
+site_name: MitoTNT
+
+nav:
+    - 'Home': 'index.md'
+    - 'Installation': 'installation.md'
+    - 'Quick Start': 'quick_start.md'
+    - 'User Guide': 'user_guide.md'
+    - 'API Reference': 'api_reference.md'
+
+theme:
+    name: readthedocs
+    logo: contents/logo.png
+    favicon: contents/favicon.png
+
+plugins:
+    - search
+    - mkdocstrings:
+        handlers:
+          python:
+            options:
+              show_root_heading: true # keep top-level class heading
+              show_root_full_path: false
+              show_object_full_path: false
+              docstring_style: numpy
+              show_source: false
+              show_signature: false # show function signatures
+              merge_init_into_class: true # merges __init__ docstring into class docstring
+              show_submodules: true
