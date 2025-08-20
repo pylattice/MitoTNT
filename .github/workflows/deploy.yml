@@ -6,7 +6,7 @@ on:
       - main
 
 permissions:
-  contents: write   # 👈 allows GITHUB_TOKEN to push to gh-pages
+  contents: write
 
 jobs:
   deploy:
@@ -22,7 +22,7 @@ jobs:
           python-version: '3.x'
 
       - name: Install dependencies
-        run: pip install mkdocs mkdocs-material
+        run: pip install mkdocs mkdocstrings[python]
 
       - name: Build site
         run: mkdocs build
