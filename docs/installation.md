@@ -1,19 +1,16 @@
 # Installation
-On github, download this [repository](https://github.com/pylattice/MitoTNT). Alternative clone the repository on terminal: 
-`git clone https://github.com/pylattice/mitoTNT.git`  
+### Install using PyPI
+```bash
+pip install mitotnt
+```
 
-### Software requirements
-- **[Jupyter Notebook](https://jupyter.org/)** or get it from **[Anaconda](https://www.anaconda.com/products/distribution)**
+Download the [repository](https://github.com/pylattice/MitoTNT) or `git clone https://github.com/pylattice/mitoTNT.git` to use the test data and notebook.
 
-- **[MitoGraph](https://github.com/vianamp/MitoGraph/)** for mitochondria segmentation.  
- Note that MitoGraph is currently only available on MacOS and Windows, but you can build it from source on Linux. Please contact ziw056@ucsd.edu if you need the Linux build.
 
-- **[ChimeraX](https://www.cgl.ucsf.edu/chimerax/)** for tracking visualization
+### Supporting Software
 
-### Python dependencies
-We will create a conda environment that automatically installs all the required dependencies.  
-1. Open anaconda prompt on Windows or just terminal on MacOS/Linux  
-2. Go to the root directory of MitoTNT repository  
-3. Create the enviroment using the provided .yml file: `conda env create --name mitotnt --file=mitotnt_env.yml`  
+- **[MitoGraph](https://github.com/vianamp/MitoGraph/)** for mitochondria segmentation and skeletonization.  
+ Note that MitoGraph is currently only available on MacOS and Windows, but you can build it from source on Linux.  
+Please contact ziw056@ucsd.edu if you need the Linux build.  
 
-To use MitoTNT, first activate the environmnet we created with `conda activate mitotnt`, and then open notebook by typing `jupyter notebook`.
+- **[ChimeraX](https://www.cgl.ucsf.edu/chimerax/)** for the visualization of MitoGraph segmentation and MitoTNT tracking

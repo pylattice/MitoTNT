@@ -2,6 +2,10 @@
 requires = ["setuptools>=42", "wheel"]
 build-backend = "setuptools.build_meta"
 
+[tool.setuptools.packages.find]
+include = ["mitotnt*"]
+exclude = ["test_data*", "helper_scripts*"]
+
 [project]
 name = "mitotnt"
 version = "0.2.0"
@@ -10,8 +14,8 @@ description = "Python toolkit for analyzing temporal dynamics of mitochondrial n
 authors = [
     { name="Zachary Wang", email="ziw056@ucsd.edu" }
 ]
-readme = "docs/quick_start.md"
-license = {file = "LICENSE"}
+readme = "./docs/quick_start.md"
+license = { file = "License" }
 requires-python = ">=3.9"
 
 # Core dependencies (from your env file)

@@ -1,0 +1,17 @@
+numpy>=1.22
+scipy>=1.8
+pandas>=1.4
+matplotlib>=3.5
+scikit-image>=0.19
+tifffile
+igraph
+fastdist
+aicsimageio
+tqdm
+numba
+jupyter
+
+[dev]
+pytest
+black
+flake8
