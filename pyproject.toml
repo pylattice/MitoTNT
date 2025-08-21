@@ -39,4 +39,4 @@ dev = [
 
 [project.urls]
 "Homepage" = "https://mitotnt.org"
-"Documentation" = "https://zichenzachwang.github.io/MitoTNT/"
+"Documentation" = "https://pylattice.github.io/MitoTNT/"
