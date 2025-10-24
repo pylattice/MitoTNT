@@ -148,4 +148,4 @@ class MitoSegmenter:
             print(f"An error occurred: {e}")
             script.close()
 
-        print(f'Load file {self.data_path}/check_mitograph.cxc in ChimeraX to visualize raw data and mitograph-segmented surfaces.')
+        print(f'Load file {self.data_path}/check_mitograph.cxc in ChimeraX to visualize raw data and mitograph-segmented surfaces.\n')

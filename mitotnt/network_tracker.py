@@ -1,4 +1,5 @@
 import time
+import warnings
 import numpy as np
 import pandas as pd
 from tqdm.auto import tqdm, trange
@@ -175,7 +176,8 @@ class NetworkTracker:
         num_frames = len(full_graphs_all_frames)
         if self.end_frame > num_frames:
             self.end_frame = num_frames - 1
-            print("The end frame specified is less than the number of frames in tracking inputs. End frame had been changed to the maximum number of frames.")
+            warnings.warn("The end frame specified is less than the number of frames in tracking inputs. "
+                          "End frame has been changed to the maximum number of frames.")
 
         for frame in trange(self.start_frame, self.end_frame - self.tracking_interval, self.tracking_interval, desc="Frame-to-frame network tracking"):
 
@@ -194,17 +196,17 @@ class NetworkTracker:
             coords_m, coords_n = full_graph_m.vs['coordinate'], full_graph_n.vs['coordinate']
 
             # warnings for unusual mitograph outputs
-            number_limit = 5000
-            if number_m > number_limit or number_n > number_limit:
-                print(
-                    '\x1b[31mThe number of nodes is relatively large and may take longer time to process! Recommend to crop a smaller region. Alternatively you can increase node_gap_size during generate_tracking_inputs.generate()\x1b[0m')
+            max_number = 5000
+            if number_m > max_number or number_n > max_number:
+                warnings.warn("The number of nodes is relatively large and may take longer time to process! "
+                              "Recommend to crop a smaller region. Alternatively you can increase node_gap_size during generate_tracking_inputs.generate()")
 
-            fluctuation_percent_limit = 20
-            fluctuation_percent = round(abs(number_n - number_m) / number_m, 4) * 100
-            if fluctuation_percent > fluctuation_percent_limit:
-                print('\x1b[31mThe number of node changes by\x1b[0m',
-                      '\x1b[31m' + str(fluctuation_percent) + '%\x1b[0m',
-                      '\x1b[31mbetween the two frames. This violates conservation of mass. Please check for any imaging or segmentation artifacts.\x1b[0m')
+            fluctuation_percent_max = 30
+            fluctuation_percent = round(abs(number_n - number_m) / number_m, 3) * 100
+            if fluctuation_percent > fluctuation_percent_max:
+                warnings.warn(
+                    f"The number of nodes changes by {fluctuation_percent}% between the two frames. "
+                    "Please check for imaging or segmentation artifacts.")
 
             # get properties
             intensity_m, intensity_n = full_graph_m.vs['intensity'], full_graph_n.vs['intensity']
@@ -265,7 +267,11 @@ class NetworkTracker:
 
             # displacement cutoff
             if self.cutoff_speed is None:
-                disp_cutoff = np.mean(min_dists) + 3 * np.std(min_dists)  # global estimate based on all nodes
+                valid_min_dists = [d for d in min_dists if not np.isnan(d)]
+                if len(valid_min_dists) == 0:
+                    disp_cutoff = np.inf  # no valid distances found
+                else:
+                    disp_cutoff = np.mean(min_dists) + 3 * np.std(min_dists)  # global estimate based on all nodes
             else:
                 disp_cutoff = self.cutoff_speed * self.frame_interval
 
@@ -370,8 +376,11 @@ class NetworkTracker:
                 other_nodes_m = [n for n in current_seg_nodes_m if n not in linked_majority_nodes_m]
                 linked_other_nodes_m = [n for n in other_nodes_m if assignment[n] < number_n]
 
-                mean_majority_dist = np.mean([dist_cost_mat[i, j] for i, j in list(
-                    zip(linked_majority_nodes_m, [assignment[n] for n in linked_majority_nodes_m]))])
+                majority_dists = [dist_cost_mat[i, j] for i, j in zip(linked_majority_nodes_m, [assignment[n] for n in linked_majority_nodes_m]) if not np.isnan(dist_cost_mat[i, j])]
+                if len(majority_dists) == 0:
+                    mean_majority_dist = np.nan
+                else:
+                    mean_majority_dist = np.mean(majority_dists)
 
                 for node in linked_other_nodes_m:
                     if dist_cost_mat[node, assignment[node]] > 3 * mean_majority_dist:  # cutoff is here
@@ -477,14 +486,20 @@ class NetworkTracker:
             print(f"Number of nodes linked, terminated at frame {frame}, initiated at frame {frame + self.tracking_interval}: {len(linked)}, {len(terminated)}, {len(initiated)}")
 
             max_linked = min(number_m, number_n)
-            percent_linked = round(len(linked) / max_linked, 4) * 100
-            if percent_linked < 70:
-                print('\x1b[31mOnly ' + str(percent_linked) + '% of the ' + str(max_linked) + ' nodes are tracked. This is likely due to large distance or inconsistent topology between the mitochondria at the two frames.\x1b[0m')
+            percent_linked_min = 70
+            percent_linked = round(len(linked) / max_linked, 3) * 100
+
+            if percent_linked < percent_linked_min:
+                warnings.warn(
+                    f"Only {percent_linked}% of the {max_linked} nodes are tracked. "
+                    "This is likely due to large distance or inconsistent topology between the two frames.")
 
             # print(f"Mean speed for tracked nodes: {(np.nanmean(dist_cost_assigned) / self.frame_interval):2f} μm/s")
 
             if (np.mean(dist_cost_assigned) / self.frame_interval) >= 1.0:
-                print('\x1b[31mThe mean node speed is greater than 1 μm/s. This is extremely fast and tracking may be unreliable!\x1b[0m')
+                warnings.warn(
+                    "The mean node speed is greater than 1 μm/s. "
+                    "This is extremely fast and tracking may be unreliable!")
 
             print(f"Tracking for frame {frame} and {frame + self.tracking_interval} is complete and took {(end - start):.2f} s\n")
             ### Assignments reported ###
@@ -550,7 +565,7 @@ class NetworkTracker:
         num_tracks = len(all_tracks)
 
         ### Gap closing ###
-        print('\nInitiating gap closing ...')
+        print('\nInitiate gap closing ...')
 
         # get track displacements
         all_track_disps = []
@@ -637,7 +652,7 @@ class NetworkTracker:
             track_cost_matrix[np.isnan(track_cost_matrix)] = np.inf
 
             # evaluate memory usage
-            print('Cost matrix memory usage: {:.1f} MB\n'.format(track_cost_matrix.nbytes / 1024 ** 2))
+            # print('Cost matrix memory usage: {:.1f} MB\n'.format(track_cost_matrix.nbytes / 1024 ** 2))
 
             # solve LAP and store linking results
             assignment = lap_solver(track_cost_matrix)[1]
@@ -718,45 +733,31 @@ class NetworkTracker:
         print(f"Number of tracks and average track length before gap closing: {len(all_tracks)}, {np.mean([len(track[0]) for track in all_tracks]):.2f}")
         print(f"Number of tracks and average track length after gap closing: {len(all_closed_tracks)}, {np.mean([len(track[0]) for track in all_closed_tracks]):.2f}")
 
-        # save tracks in the form of one node per row
         print('\nSaving final node trajectory file. This might take a few minutes for large files.')
-        tracks = pd.DataFrame(columns=['frame_id', 'unique_node_id', 'frame_node_id', 'frame_seg_id', 'frame_frag_id', 'x', 'y', 'z','intensity', 'width'])
-        tracks = tracks[['frame_id', 'unique_node_id', 'frame_node_id', 'frame_seg_id', 'frame_frag_id', 'x', 'y', 'z', 'intensity', 'width']]  # reorder the columns
 
-        df_index = 0
+        records = []
+        append = records.append 
+
         for track_id, track in enumerate(all_closed_tracks):
-            track_frames, track_nodes, track_segs, track_frags, track_coords, track_ints, track_widths = track[0], track[1], \
-            track[2], track[3], track[4], track[5], track[6]
-
+            track_frames, track_nodes, track_segs, track_frags, track_coords, track_ints, track_widths = track
             for f in range(len(track_frames)):
-                x, y, z = track_coords[f][0], track_coords[f][1], track_coords[f][2]
-                tracks.loc[df_index] = {'frame_id': track_frames[f], 'unique_node_id': track_id,
-                                        'frame_node_id': track_nodes[f], 'frame_seg_id': track_segs[f],
-                                        'frame_frag_id': track_frags[f],
-                                        'x': x, 'y': y, 'z': z, 'intensity': track_ints[f], 'width': track_widths[f]}
-                df_index += 1
+                x, y, z = track_coords[f]
+                append((
+                    track_frames[f], track_id, track_nodes[f], track_segs[f], track_frags[f],
+                    x, y, z, track_ints[f], track_widths[f]
+                ))
 
+        tracks = pd.DataFrame.from_records(
+            records,
+            columns=[
+                'frame_id', 'unique_node_id', 'frame_node_id', 'frame_seg_id', 'frame_frag_id',
+                'x', 'y', 'z', 'intensity', 'width'
+            ]
+        )
         tracks.sort_values(['unique_node_id', 'frame_id'], inplace=True, ignore_index=True)
 
-        # define a recursive node finding function to construct tracked network by skipping untracked nodes
-        def find_connected_unique_nodes(this_node, visited_nodes):
 
-            neighs = full_graph.neighbors(this_node)
-            for visited_node in visited_nodes:
-                if visited_node in neighs:
-                    neighs.remove(visited_node)
-
-            visited_nodes.append(this_node)
-
-            for neigh in neighs:
-                # if the frame node is tracked for this frame, add to list
-                if neigh in tracked_frame_nodes:
-                    connected_unique_nodes.append(frame_to_unique[neigh])
-                else:
-                    find_connected_unique_nodes(neigh, visited_nodes)
-            return
-
-        # add connected nodes using unique indexing
+        # add connected_unique_nodes for tracked graph creation by skipping untracked nodes
         final_tracks = pd.DataFrame()
         for frame in range(self.start_frame, self.end_frame - self.tracking_interval, self.tracking_interval):
 
@@ -769,15 +770,18 @@ class NetworkTracker:
 
             all_connected_unique_nodes = []
             for node in tracked_frame_nodes:
-                connected_unique_nodes = []
-                find_connected_unique_nodes(node, [node])
+                connected_unique_nodes = _find_connected_unique_nodes(
+                    node, full_graph, tracked_frame_nodes, frame_to_unique
+                )
                 all_connected_unique_nodes.append(connected_unique_nodes)
 
             tracks_frame.insert(2, 'connected_unique_node_id', [_list_to_str(a) for a in all_connected_unique_nodes])
             final_tracks = pd.concat([final_tracks, tracks_frame])  # accumulate tracks from each frame
 
-        # reorder the columns
-        final_tracks = final_tracks[['frame_id', 'unique_node_id', 'frame_node_id', 'frame_seg_id', 'frame_frag_id', 'connected_unique_node_id', 'x', 'y', 'z', 'intensity', 'width']]
+        final_tracks = final_tracks[[
+            'frame_id', 'unique_node_id', 'frame_node_id', 'frame_seg_id', 'frame_frag_id',
+            'connected_unique_node_id', 'x', 'y', 'z', 'intensity', 'width'
+        ]]
 
         # save data
         final_tracks.to_csv(self.segmented_mito.save_path + 'mito_node_tracks.csv', index=False)
@@ -974,3 +978,29 @@ def _get_mappings(assignment, segment_nodes, node_to_seg_mapping):
 
     return node_m_to_seg_n, seg_n_to_node_m
 
+
+def _find_connected_unique_nodes(this_node, full_graph, tracked_frame_nodes, frame_to_unique, visited=None):
+    if visited is None:
+        visited = set()
+
+    visited.add(this_node)
+    connected_unique_nodes = []
+
+    # Get all neighbors of this node
+    neighs = full_graph.neighbors(this_node)
+
+    for neigh in neighs:
+        if neigh in visited:
+            continue
+
+        # If the neighbor is tracked in this frame, add its unique ID
+        if neigh in tracked_frame_nodes:
+            connected_unique_nodes.append(frame_to_unique[neigh])
+        else:
+            # Recursively search through untracked nodes
+            deeper_nodes = _find_connected_unique_nodes(
+                neigh, full_graph, tracked_frame_nodes, frame_to_unique, visited
+            )
+            connected_unique_nodes.extend(deeper_nodes)
+
+    return connected_unique_nodes

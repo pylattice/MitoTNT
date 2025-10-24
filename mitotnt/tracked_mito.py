@@ -549,7 +549,6 @@ class TrackedMito:
             # store data
             node_diffusivity.append({'unique_node_id':n, 'diffusivity':d, 'msd':msd_per_frame, 'r_squared':r_squared, 'num_points':n_points})
 
-        print('Complete')
         node_diffusivity = pd.DataFrame.from_dict(node_diffusivity)
         node_diffusivity.to_csv(self.save_path+'node_diffusivity.csv', index=False)
         self.node_diffusivity = node_diffusivity
@@ -717,7 +716,6 @@ class TrackedMito:
 
                 seg_diffusivity.append({'center_frame_id': center_frame, 'seg_id':seg_id, 'diffusivity':d, 'msd':msd_per_frame, 'r_squared':r_squared, 'num_points':n_points})
 
-        print('Complete')
         seg_diffusivity = pd.DataFrame.from_dict(seg_diffusivity)
         seg_diffusivity.to_csv(self.save_path+'segment_diffusivity.csv', index=False)
         self.segment_diffusivity = seg_diffusivity
@@ -892,7 +890,6 @@ class TrackedMito:
                     {'center_frame_id': center_frame, 'frag_id': frag_id, 'diffusivity': d, 'msd': msd_per_frame,
                      'r_squared': r_squared, 'num_points': n_points})
 
-        print('Complete')
         frag_diffusivity = pd.DataFrame.from_dict(frag_diffusivity)
         frag_diffusivity.to_csv(self.save_path + 'fragment_diffusivity.csv', index=False)
         self.fragment_diffusivity = frag_diffusivity

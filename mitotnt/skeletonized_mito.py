@@ -1,6 +1,7 @@
 import glob
 import os
 import numpy as np
+import warnings
 import pandas as pd
 import igraph as ig
 from tqdm.auto import tqdm, trange
@@ -80,7 +81,7 @@ class SkeletonizedMito:
 
         if os.path.exists(self.save_path+'extracted_graphs.npz') and not overwrite:
             self._load_graphs()
-            print("Graphs have already been extracted. Reloaded previous data.")
+            print("Graphs have already been extracted. Reload previous data.\n")
         else:
             self.extract_full_graphs_and_segment_nodes(node_gap_size=node_gap_size)
             self.extract_simple_graphs()
@@ -97,31 +98,31 @@ class SkeletonizedMito:
             full_graph = ig.Graph()
 
             if len(glob.glob(folder + '/*.coo')) == 1 and len(glob.glob(folder + '/*.gnet')) == 1 and len(glob.glob(folder + '//*.txt')) == 1:
-                raw_coords = np.loadtxt(glob.glob(folder + '/*.coo')[0])
-                bulk_nodes = pd.read_csv(glob.glob(folder + '/*.txt')[0], delimiter='\t')
+                simple_graph_coords = np.loadtxt(glob.glob(folder + '/*.coo')[0])
+                segment_node_data = pd.read_csv(glob.glob(folder + '/*.txt')[0], delimiter='\t')
             else:
                 raise Exception(f"{folder!r} has none/duplicate MitoGraph outputs.")
 
-            coords = round_coord(raw_coords)
+            simple_graph_coords = _round_coord(simple_graph_coords)
 
-            # create all the network nodes
-            full_graph.add_vertices(len(coords))
+            # create all the degree != 2 nodes for the convenience of mapping
+            full_graph.add_vertices(len(simple_graph_coords))
 
-            line_ids = np.unique(bulk_nodes['line_id'])
+            line_ids = np.unique(segment_node_data['line_id'])
             frame_segment_nodes = []
 
             for line in line_ids:
-                line_nodes = bulk_nodes[bulk_nodes['line_id'] == line]
+                line_nodes = segment_node_data[segment_node_data['line_id'] == line]
                 line_nodes = line_nodes.reset_index()
                 end_index = len(line_nodes) - 1
 
                 # get branching and terminal nodes to contruct graph
-                coord_end_a = round_coord(line_nodes.loc[0, 'x':'z'])
-                coord_end_b = round_coord(line_nodes.loc[end_index, 'x':'z'])
+                coord_end_a = _round_coord(line_nodes.loc[0, 'x':'z'])
+                coord_end_b = _round_coord(line_nodes.loc[end_index, 'x':'z'])
 
                 # find index of network nodes in .coo based on coords
-                index_end_a = coord_to_node(coords, coord_end_a)
-                index_end_b = coord_to_node(coords, coord_end_b)
+                index_end_a = _coord_to_node(simple_graph_coords, coord_end_a)
+                index_end_b = _coord_to_node(simple_graph_coords, coord_end_b)
 
                 node_end_a = full_graph.vs[index_end_a]
                 node_end_a['index'] = node_end_a.index
@@ -171,7 +172,7 @@ class SkeletonizedMito:
                         segment_nodes.append(index_end_b)  # get the node index of another end
                         frame_segment_nodes.append(segment_nodes)  # finish this segment
 
-            full_graph.simplify(combine_edges='sum')  # remove self-loops, and combine multiple edges if needed
+            full_graph = _clean_graph(full_graph)
 
             all_full_graphs.append(full_graph)
             all_segment_nodes.append(frame_segment_nodes)
@@ -188,31 +189,31 @@ class SkeletonizedMito:
             simple_graph = ig.Graph()
 
             if len(glob.glob(folder+'/*.coo')) == 1 and len(glob.glob(folder+'/*.gnet')) == 1 and len(glob.glob(folder+'//*.txt')) == 1:
-                raw_coords = np.loadtxt(glob.glob(folder+'/*.coo')[0])
+                simple_graph_coords = np.loadtxt(glob.glob(folder+'/*.coo')[0])
                 edge_list = np.loadtxt(glob.glob(folder+'/*.gnet')[0], skiprows=1)
-                bulk_nodes = pd.read_csv(glob.glob(folder+'/*.txt')[0], delimiter='\t')
+                segment_node_data = pd.read_csv(glob.glob(folder+'/*.txt')[0], delimiter='\t')
             else:
                 raise Exception(f"{folder!r} has none/duplicate MitoGraph outputs.")
 
-            coords = round_coord(raw_coords)
+            simple_graph_coords = _round_coord(simple_graph_coords)
 
-            simple_graph.add_vertices(len(coords))
+            simple_graph.add_vertices(len(simple_graph_coords))
 
             # create all the network nodes
-            line_ids = np.unique(bulk_nodes['line_id'])
+            line_ids = np.unique(segment_node_data['line_id'])
 
             for line in line_ids:
-                line_nodes = bulk_nodes[bulk_nodes['line_id']==line]
+                line_nodes = segment_node_data[segment_node_data['line_id']==line]
                 line_nodes = line_nodes.reset_index()
                 end_index = len(line_nodes) - 1
 
                 # get branching and terminal nodes to contruct graph
-                coord_end_a = round_coord(line_nodes.loc[0, 'x':'z'])
-                coord_end_b = round_coord(line_nodes.loc[end_index, 'x':'z'])
+                coord_end_a = _round_coord(line_nodes.loc[0, 'x':'z'])
+                coord_end_b = _round_coord(line_nodes.loc[end_index, 'x':'z'])
 
                 # find index of network nodes in .coo based on coords
-                index_end_a = coord_to_node(coords, coord_end_a)
-                index_end_b = coord_to_node(coords, coord_end_b)
+                index_end_a = _coord_to_node(simple_graph_coords, coord_end_a)
+                index_end_b = _coord_to_node(simple_graph_coords, coord_end_b)
 
                 node_end_a = simple_graph.vs[index_end_a]
                 node_end_a['index'] = node_end_a.index
@@ -229,6 +230,8 @@ class SkeletonizedMito:
             for edge in edge_list:
                 node_end_a, node_end_b, distance = int(edge[0]), int(edge[1]), edge[2]
                 simple_graph.add_edge(node_end_a, node_end_b, distance=distance)
+
+            simple_graph = _clean_graph(simple_graph)
 
             all_simple_graphs.append(simple_graph)
 
@@ -261,7 +264,7 @@ class SkeletonizedMito:
                 root = frag.vs['index'].index(node_index)
     
                 # contract edges to extract simple graph around the node
-                simple_graph = contract_edges(frag, root)
+                simple_graph = _contract_edges(frag, root)
                 frame_simple_graphs_per_node.append(simple_graph)
     
             all_local_simple_graphs.append(frame_simple_graphs_per_node)
@@ -292,23 +295,13 @@ class SkeletonizedMito:
         self.local_simple_graphs = data['local_simple_graphs']
 
 
-def round_coord(coord, decimals=3):
-    result = np.round(np.array(coord), decimals)
-    return result
+def _contract_edges(frag, root):
 
-
-def coord_to_node(all_coords, coord):
-    dist = [np.linalg.norm(disp) for disp in all_coords - coord]
-    return np.argmin(dist)
-
-
-def contract_edges(frag, root):
-
-    bulk_nodes = []
+    segment_node_data = []
     edge_weights = []
     all_segments = []
-
     last_node = -1
+
     for i, node in enumerate(frag.dfsiter(root)):
 
         n = node.index
@@ -319,7 +312,7 @@ def contract_edges(frag, root):
 
                 # first node on a new segment after concluding a segment
                 if last_node == -1:
-                    bulk_nodes.append(n)
+                    segment_node_data.append(n)
                     last_node = n
 
                 # sometimes in large graph a new segment is visited without reaching a degree!=2 node
@@ -330,36 +323,35 @@ def contract_edges(frag, root):
 
                     # when it fails just start another bulk
                     except Exception:
-                        if len(bulk_nodes) != 0:
-                            all_segments.append([bulk_nodes, sum(edge_weights)])
-                            bulk_nodes = []
+                        if len(segment_node_data) != 0:
+                            all_segments.append([segment_node_data, sum(edge_weights)])
+                            segment_node_data = []
                             edge_weights = []
 
-                            bulk_nodes.append(n)
+                            segment_node_data.append(n)
                             last_node = n
 
                     # when the two nodes are on bulk we can just append distance and node
                     else:
                         edge_weights.append(weight)
-                        bulk_nodes.append(n)
+                        segment_node_data.append(n)
                         last_node = n
 
                 # conclude the segment if this is the last node traversed
                 if i == len(frag.vs) - 1:
-                    if len(bulk_nodes) != 0:
-                        all_segments.append([bulk_nodes, sum(edge_weights)])
-                        bulk_nodes = []
+                    if len(segment_node_data) != 0:
+                        all_segments.append([segment_node_data, sum(edge_weights)])
+                        segment_node_data = []
                         edge_weights = []
                         last_node = -1
 
             # conclude the segment when reached a terminal or branching point
             else:
-                if len(bulk_nodes) != 0:
-                    all_segments.append([bulk_nodes, sum(edge_weights)])
-                    bulk_nodes = []
+                if len(segment_node_data) != 0:
+                    all_segments.append([segment_node_data, sum(edge_weights)])
+                    segment_node_data = []
                     edge_weights = []
                     last_node = -1
-
 
     # add edges and delete nodes
     edge_nodes = []
@@ -389,3 +381,26 @@ def contract_edges(frag, root):
     frag.simplify(combine_edges='sum')
 
     return frag
+
+
+def _round_coord(coord, decimals=3):
+    result = np.round(np.array(coord), decimals)
+    return result
+
+
+def _coord_to_node(all_coords, coord):
+    dist = [np.linalg.norm(disp) for disp in all_coords - coord]
+
+    min_node = np.argmin(dist)
+    min_dist = dist[min_node]
+
+    if min_dist != 0.0:
+        warnings.warn(f'Imprecise coordinate mapping with distance equal to {dist}')
+    
+    return min_node
+
+
+def _clean_graph(g):
+    # remove self-loops, and combine multiple edges just to be safe
+    g.simplify(combine_edges='sum')
+    return g
