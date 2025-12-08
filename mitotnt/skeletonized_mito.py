@@ -394,8 +394,8 @@ def _coord_to_node(all_coords, coord):
     min_node = np.argmin(dist)
     min_dist = dist[min_node]
 
-    if min_dist != 0.0:
-        warnings.warn(f'Imprecise coordinate mapping with distance equal to {dist}')
+    # if min_dist != 0.0:
+    #     warnings.warn(f'Imprecise coordinate mapping with distance equal to {dist}')
     
     return min_node
 
