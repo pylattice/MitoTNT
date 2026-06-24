@@ -8,7 +8,7 @@ exclude = ["test_data*", "helper_scripts*"]
 
 [project]
 name = "mitotnt"
-version = "0.3.0"
+version = "1.0.0"
 description = "Python toolkit for analyzing temporal dynamics of mitochondrial networks"
 
 authors = [
