@@ -1,9 +1,23 @@
 # Quick Start
 
 MitoTNT is a Python toolkit for analyzing the temporal dynamics of mitochondrial networks.  
-It integrates with **MitoGraph** for per-frame segmentation, then performs **tracking, remodeling event detection, motility analysis, and ChimeraX visualization**.
+It integrates with **MitoGraph** for per-frame segmentation, then performs **tracking, remodeling event detection, motility analysis, feature extraction, and ChimeraX visualization**.
 
 This page walks through a typical workflow step by step.
+
+---
+
+## Fast and scalable
+
+The core pipeline has been re-engineered to process large 4D datasets efficiently while producing results numerically equivalent to the original implementation:
+
+- **Multiprocessing** — graph extraction, topology-cost computation, and gap closing fan out across CPU cores (fork-based and copy-on-write, so the large graph objects are shared rather than pickled to each worker).
+- **Batched graph construction** — skeleton graphs are assembled with single bulk `add_vertices`/`add_edges` calls instead of per-node incremental edits, turning the previously O(N²) extraction into near-linear time (≈20× faster at ~140k nodes/frame).
+- **KD-tree spatial search** — `scipy.spatial.cKDTree` replaces brute-force O(N²) nearest-neighbor and coordinate-matching scans for candidate links and gap closing.
+- **Sparse linear assignment** — frame-to-frame and gap-closing linking are solved on sparse augmented cost matrices with the Jonker–Volgenant solver (`lap.lapmod`) instead of allocating dense matrices, drastically reducing memory on large frames.
+- **Vectorized lookups** — dict/set-based mappings throughout remove repeated linear scans and per-frame DataFrame re-filtering.
+
+In practice the full pipeline (tracking → remodeling → motility) processes a **90-frame movie with ~1,400 nodes per frame in ~85 s on a multi-core workstation**, and scales to substantially larger datasets. Worker counts are configurable via the `num_workers` argument.
 
 ---
 
@@ -138,6 +152,29 @@ These files can be imported for downstream analyses and plotting.
 
 ---
 
+## 7. Extract and plot features
+
+`FeatureExtractor` aggregates the per-frame results from the previous steps into tidy tables for statistics and plotting. Run it after step 6, since it reads the diffusivity and remodeling outputs.
+
+```python
+fe = mitotnt.FeatureExtractor(tracked)  # or FeatureExtractor(save_path='.../mitotnt/')
+
+fe.compute_graph_features(save_csv=True)     # topology: lengths, widths, tortuosity, branching, efficiency, betweenness, ...
+fe.compute_diffusivity(save_csv=True)        # node/segment/fragment diffusivity (well-fit tracks only)
+fe.compute_remodeling_rates(save_csv=True)   # per-frame fusion and fission rates
+
+# Plot distributions for any computed category
+fe.plot_features_as_histogram()   # also: plot_features_as_violinplot(), plot_features_as_boxplot()
+```
+
+Each step writes a CSV:
+
+* `graph_features.csv` → network topology features per frame.
+* `motility_features.csv` → diffusivity values by level.
+* `remodeling_features.csv` → fusion/fission rates per frame.
+
+---
+
 
 ## Summary
 
@@ -147,3 +184,4 @@ These files can be imported for downstream analyses and plotting.
 4. Track fragments across frames using `NetworkTracker`.
 5. Visualize skeletons and dynamics in ChimeraX with `Visualizer`.
 6. Analyze remodeling events and motility with `TrackedMito`.
+7. Aggregate and plot features with `FeatureExtractor`.

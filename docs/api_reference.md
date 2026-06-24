@@ -14,8 +14,14 @@ This section documents the main classes and functions in the `mitotnt` package.
 
 ::: mitotnt.network_tracker.NetworkTracker
 
+---
+
 ::: mitotnt.tracked_mito.TrackedMito
 
 ---
 
 ::: mitotnt.visualizer.Visualizer
+
+---
+
+::: mitotnt.feature_extractor.FeatureExtractor

@@ -16,6 +16,9 @@ dist/
 # Logs
 *.log
 
+# Generated MitoTNT results from the test data
+test_data/mitotnt/
+
 # OS-specific
 .DS_Store
 Thumbs.db

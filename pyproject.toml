@@ -8,7 +8,7 @@ exclude = ["test_data*", "helper_scripts*"]
 
 [project]
 name = "mitotnt"
-version = "0.2.0"
+version = "0.3.0"
 description = "Python toolkit for analyzing temporal dynamics of mitochondrial networks"
 
 authors = [
@@ -24,9 +24,11 @@ dependencies = [
     "scipy>=1.8",
     "pandas>=1.4",
     "matplotlib>=3.5",
+    "seaborn",
     "scikit-image>=0.19",
     "tifffile",
     "igraph",
+    "lap",
     "fastdist",
     "aicsimageio",
     "tqdm",

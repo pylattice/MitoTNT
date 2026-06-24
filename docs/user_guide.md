@@ -194,7 +194,7 @@ Since fusion events can be considered as fission events reversed in time, the op
 Multiple remodeling nodes located in proximity (less than 5 edges away) are grouped into a single fission/fusion site.  
 
 
-- `stride_size`: step size for the sliding window (default is 1, detects every frame)
+- `tracking_interval`: step size for the sliding window in frames (default is None, inherits the value used during tracking).
 - `half_win_size`: size of the half sliding window in number of frames (default is 4). The higher the value the stricter the requirement for calling fusion/fission.
 - `min_tracked_frames`: minimum number of frames that are tracked in both half window in order to declare an event (default is 2).
 
@@ -237,7 +237,7 @@ Parameters for computing MSD vs. time delay curve:
 
 Additional parameters for computing segment and fragment level diffusivity:
 
-- `tracked_ratio`: the minimum ratio of tracked nodes in each segment/fragment to be qualified for calculating diffusivity (default is 10).
+- `tracked_ratio`: the minimum ratio of tracked nodes in each segment/fragment to be qualified for calculating diffusivity (default is 0.3).
 - `selected_frames`: the frames that segment and fragment topology references are taken. This is needed due to the constant network remodeling through
 fusion and fission, thus changing segments/fragments. 
 If not given, frames are auto-selected at intervals of 2×`half_win_size` across the movie.
@@ -268,3 +268,47 @@ Each row is a tracked node/segment/fragment with the following columns:
 
 
 **The remodeling events and motility data are now yours to explore. Feel free to use them in your own research and plot figures in your desired style.**
+
+---
+
+
+## Feature Extraction
+
+**In this section we will aggregate the per-frame results into tidy tables for statistics and plotting.**
+
+`FeatureExtractor` collects the outputs produced in the previous steps (the extracted graphs, the diffusivity CSVs, and the remodeling events) into three feature tables. Create it from a `TrackedMito` object, or directly from a results directory:
+
+```python
+feature_extractor = mitotnt.FeatureExtractor(tracked_mito)   # or FeatureExtractor(save_path='.../mitotnt/')
+```
+
+Run feature extraction after the post-tracking analyses, since `compute_diffusivity` reads the `*_diffusivity.csv` files and `compute_remodeling_rates` reads `remodeling_events.csv`.
+
+### 1. Graph (topology) features
+Per-frame network topology computed from the extracted graphs: node/segment/fragment counts, segment lengths and widths, fragment length/diameter/tortuosity, graph density, global efficiency, clustering coefficient, betweenness, and branching ratios.
+```python
+feature_extractor.compute_graph_features(save_csv=True)
+```
+Results are stored in `feature_extractor.graph_features` and written to `mitotnt/graph_features.csv`.
+
+### 2. Motility features
+Diffusivity values gathered from the node/segment/fragment diffusivity CSVs, keeping only well-fit tracks (R² > 0.8 and at least 3 points).
+```python
+feature_extractor.compute_diffusivity(save_csv=True)
+```
+Results are stored in `feature_extractor.motility_features` and written to `mitotnt/motility_features.csv`.
+
+### 3. Remodeling rates
+Per-frame fusion and fission rates, normalized by the number of nodes in each frame.
+```python
+feature_extractor.compute_remodeling_rates(save_csv=True)
+```
+Results are stored in `feature_extractor.remodeling_features` and written to `mitotnt/remodeling_features.csv`.
+
+### 4. Plot feature distributions
+Each computed feature category can be plotted as histograms, violin plots, or box plots:
+```python
+feature_extractor.plot_features_as_histogram()
+feature_extractor.plot_features_as_violinplot()
+feature_extractor.plot_features_as_boxplot()
+```

@@ -1,9 +1,13 @@
 import glob
+import io
 import os
 import numpy as np
 import warnings
 import pandas as pd
 import igraph as ig
+import multiprocessing as mp
+from functools import partial
+from scipy.spatial import cKDTree
 from tqdm.auto import tqdm, trange
 from mitotnt.mito_segmenter import MitoSegmenter
 from pathlib import Path
@@ -62,7 +66,8 @@ class SkeletonizedMito:
             raise ValueError(f"No matching folders in {self.data_path!r}")
 
 
-    def extract_graphs(self, overwrite: bool = False, node_gap_size: int = 0):
+    def extract_graphs(self, overwrite: bool = False, node_gap_size: int = 0,
+                       num_workers: int = 20):
         """
         Extract the graph representations of the previously segmented mitochondria used for tracking.
 
@@ -72,6 +77,10 @@ class SkeletonizedMito:
             Whether to overwrite existing graphs (default is False).
         node_gap_size : int, optional
             Number of nodes to skip when generating the full graphs (default is 0, keep all).
+        num_workers : int, optional
+            Max processes used to extract frames in parallel (default 20, capped
+            at the CPU count and the number of frames). Each extraction stage is
+            independent per frame, so this fans out across frames.
 
         Returns
         -------
@@ -83,193 +92,53 @@ class SkeletonizedMito:
             self._load_graphs()
             print("Graphs have already been extracted. Reload previous data.\n")
         else:
-            self.extract_full_graphs_and_segment_nodes(node_gap_size=node_gap_size)
-            self.extract_simple_graphs()
-            self.extract_local_simple_graphs()
+            self.extract_full_graphs_and_segment_nodes(node_gap_size=node_gap_size,
+                                                       num_workers=num_workers)
+            self.extract_simple_graphs(num_workers=num_workers)
+            self.extract_local_simple_graphs(num_workers=num_workers)
             self._save_graphs()
 
 
-    def extract_full_graphs_and_segment_nodes(self, node_gap_size: int = 0):
+    def extract_full_graphs_and_segment_nodes(self, node_gap_size: int = 0,
+                                              num_workers: int = 20):
+        # Per-frame work is independent -> fan out across frames. Each worker
+        # reads its frame's MitoGraph files and builds the full graph + segment
+        # nodes; results come back in frame order.
+        worker = partial(_extract_full_graph_one, node_gap_size=node_gap_size)
+        results = _map_frames(worker, self.list_of_folders, num_workers,
+                              "Extracting full graphs and segment nodes")
 
-        all_full_graphs = []
-        all_segment_nodes = []
-        for folder in tqdm(self.list_of_folders, desc="Extracting full graphs and segment nodes"):
-
-            full_graph = ig.Graph()
-
-            if len(glob.glob(folder + '/*.coo')) == 1 and len(glob.glob(folder + '/*.gnet')) == 1 and len(glob.glob(folder + '//*.txt')) == 1:
-                simple_graph_coords = np.loadtxt(glob.glob(folder + '/*.coo')[0])
-                segment_node_data = pd.read_csv(glob.glob(folder + '/*.txt')[0], delimiter='\t')
-            else:
-                raise Exception(f"{folder!r} has none/duplicate MitoGraph outputs.")
-
-            simple_graph_coords = _round_coord(simple_graph_coords)
-
-            # create all the degree != 2 nodes for the convenience of mapping
-            full_graph.add_vertices(len(simple_graph_coords))
-
-            line_ids = np.unique(segment_node_data['line_id'])
-            frame_segment_nodes = []
-
-            for line in line_ids:
-                line_nodes = segment_node_data[segment_node_data['line_id'] == line]
-                line_nodes = line_nodes.reset_index()
-                end_index = len(line_nodes) - 1
-
-                # get branching and terminal nodes to contruct graph
-                coord_end_a = _round_coord(line_nodes.loc[0, 'x':'z'])
-                coord_end_b = _round_coord(line_nodes.loc[end_index, 'x':'z'])
-
-                # find index of network nodes in .coo based on coords
-                index_end_a = _coord_to_node(simple_graph_coords, coord_end_a)
-                index_end_b = _coord_to_node(simple_graph_coords, coord_end_b)
-
-                node_end_a = full_graph.vs[index_end_a]
-                node_end_a['index'] = node_end_a.index
-                node_end_a['coordinate'] = line_nodes.loc[0, 'x':'z'].to_numpy()
-                node_end_a['intensity'] = line_nodes.loc[0, 'pixel_intensity']
-                node_end_a['width'] = line_nodes.loc[0, 'width_(um)']
-
-                node_end_b = full_graph.vs[index_end_b]
-                node_end_b['index'] = node_end_b.index
-                node_end_b['coordinate'] = line_nodes.loc[end_index, 'x':'z'].to_numpy()
-                node_end_b['intensity'] = line_nodes.loc[end_index, 'pixel_intensity']
-                node_end_b['width'] = line_nodes.loc[end_index, 'width_(um)']
-
-                # get node id of the nodes on same segment, start with one end
-                last_node = index_end_a
-                segment_nodes = [index_end_a]
-                sel_node_index = range(0, end_index, 1 + node_gap_size)
-
-                for index in sel_node_index:
-                    # add bulk nodes
-                    if index > 0 and index < sel_node_index[-1]:
-                        # add vertex and vertex attributes
-                        full_graph.add_vertices(1)
-                        bulk_node = full_graph.vs[-1]
-                        bulk_node['index'] = bulk_node.index
-                        bulk_node['coordinate'] = line_nodes.loc[index, 'x':'z'].to_numpy()
-                        bulk_node['intensity'] = line_nodes.loc[index, 'pixel_intensity']
-                        bulk_node['width'] = line_nodes.loc[index, 'width_(um)']
-
-                        # add edge and edge attributes
-                        current_node = len(full_graph.vs) - 1
-                        dist = np.linalg.norm(
-                            full_graph.vs[last_node]['coordinate'] - full_graph.vs[current_node]['coordinate'])
-                        full_graph.add_edge(last_node, current_node, distance=dist)
-                        last_node = current_node
-
-                        # add segment node index
-                        segment_nodes.append(current_node)
-
-                    # link last bulk node to the other network node
-                    if index == sel_node_index[-1]:
-                        dist = np.linalg.norm(
-                            full_graph.vs[last_node]['coordinate'] - full_graph.vs[index_end_b]['coordinate'])
-                        full_graph.add_edge(last_node, index_end_b, distance=dist)
-
-                        # add segment node index
-                        segment_nodes.append(index_end_b)  # get the node index of another end
-                        frame_segment_nodes.append(segment_nodes)  # finish this segment
-
-            full_graph = _clean_graph(full_graph)
-
-            all_full_graphs.append(full_graph)
-            all_segment_nodes.append(frame_segment_nodes)
-
+        all_full_graphs = [r[0] for r in results]
+        all_segment_nodes = [r[1] for r in results]
         self.full_graphs = np.array(all_full_graphs, dtype=object)
         self.segment_nodes = np.array(all_segment_nodes, dtype=object)
 
 
-    def extract_simple_graphs(self):
-
-        all_simple_graphs = []
-        for folder in tqdm(self.list_of_folders, desc="Extracting simple graphs"):
-
-            simple_graph = ig.Graph()
-
-            if len(glob.glob(folder+'/*.coo')) == 1 and len(glob.glob(folder+'/*.gnet')) == 1 and len(glob.glob(folder+'//*.txt')) == 1:
-                simple_graph_coords = np.loadtxt(glob.glob(folder+'/*.coo')[0])
-                edge_list = np.loadtxt(glob.glob(folder+'/*.gnet')[0], skiprows=1)
-                segment_node_data = pd.read_csv(glob.glob(folder+'/*.txt')[0], delimiter='\t')
-            else:
-                raise Exception(f"{folder!r} has none/duplicate MitoGraph outputs.")
-
-            simple_graph_coords = _round_coord(simple_graph_coords)
-
-            simple_graph.add_vertices(len(simple_graph_coords))
-
-            # create all the network nodes
-            line_ids = np.unique(segment_node_data['line_id'])
-
-            for line in line_ids:
-                line_nodes = segment_node_data[segment_node_data['line_id']==line]
-                line_nodes = line_nodes.reset_index()
-                end_index = len(line_nodes) - 1
-
-                # get branching and terminal nodes to contruct graph
-                coord_end_a = _round_coord(line_nodes.loc[0, 'x':'z'])
-                coord_end_b = _round_coord(line_nodes.loc[end_index, 'x':'z'])
-
-                # find index of network nodes in .coo based on coords
-                index_end_a = _coord_to_node(simple_graph_coords, coord_end_a)
-                index_end_b = _coord_to_node(simple_graph_coords, coord_end_b)
-
-                node_end_a = simple_graph.vs[index_end_a]
-                node_end_a['index'] = node_end_a.index
-                node_end_a['coordinate'] = line_nodes.loc[0, 'x':'z'].to_numpy()
-                node_end_a['intensity'] = line_nodes.loc[0, 'pixel_intensity']
-                node_end_a['width'] = line_nodes.loc[0, 'width_(um)']
-
-                node_end_b = simple_graph.vs[index_end_b]
-                node_end_b['index'] = node_end_b.index
-                node_end_b['coordinate'] = line_nodes.loc[end_index, 'x':'z'].to_numpy()
-                node_end_b['intensity'] = line_nodes.loc[end_index, 'pixel_intensity']
-                node_end_b['width'] = line_nodes.loc[end_index, 'width_(um)']
-
-            for edge in edge_list:
-                node_end_a, node_end_b, distance = int(edge[0]), int(edge[1]), edge[2]
-                simple_graph.add_edge(node_end_a, node_end_b, distance=distance)
-
-            simple_graph = _clean_graph(simple_graph)
-
-            all_simple_graphs.append(simple_graph)
-
-        self.simple_graphs = np.array(all_simple_graphs, dtype=object)
+    def extract_simple_graphs(self, num_workers: int = 20):
+        results = _map_frames(_extract_simple_graph_one, self.list_of_folders,
+                              num_workers, "Extracting simple graphs")
+        self.simple_graphs = np.array(results, dtype=object)
 
 
-    def extract_local_simple_graphs(self):
-    
-        all_local_simple_graphs = []
-        try:
-            all_full_graphs = self.full_graphs
-        except:
+    def extract_local_simple_graphs(self, num_workers: int = 20):
+
+        if self.full_graphs is None:
             raise Exception("No full graphs to extract. Run extract_full_graphs_and_segment_nodes() first.")
-    
-        for frame_full_graphs in tqdm(all_full_graphs, desc="Extracting local simple graphs"):
-    
-            # load graphs of nodes and edges
-            total_num_nodes = len(frame_full_graphs.vs)
-    
-            # get fragments
-            all_frags = frame_full_graphs.components()
-    
-            # contract edges and update frag and return new root index
-            frame_simple_graphs_per_node = []
-            for node_index in range(total_num_nodes):
-                # use full graph node id
-                frag = frame_full_graphs.induced_subgraph(all_frags[all_frags.membership[node_index]])
-    
-                # find fragment graph node id
-                root = frag.vs['index'].index(node_index)
-    
-                # contract edges to extract simple graph around the node
-                simple_graph = _contract_edges(frag, root)
-                frame_simple_graphs_per_node.append(simple_graph)
-    
-            all_local_simple_graphs.append(frame_simple_graphs_per_node)
-    
-        self.local_simple_graphs = np.array(all_local_simple_graphs, dtype=object)
+
+        # Publish the (read-only) full graphs as a module global BEFORE forking
+        # so workers inherit them via copy-on-write; only the frame index is sent
+        # through the pool. induced_subgraph()/_contract_edges() operate on copies,
+        # so the shared graphs are never mutated (fork-safe).
+        global _WORKER_FULL_GRAPHS
+        _WORKER_FULL_GRAPHS = list(self.full_graphs)
+        try:
+            results = _map_frames(_extract_local_simple_one,
+                                  list(range(len(_WORKER_FULL_GRAPHS))),
+                                  num_workers, "Extracting local simple graphs")
+        finally:
+            _WORKER_FULL_GRAPHS = []  # release references in the parent
+
+        self.local_simple_graphs = np.array(results, dtype=object)
     
     
     def _save_graphs(self):
@@ -280,7 +149,9 @@ class SkeletonizedMito:
                 'segment_nodes': self.segment_nodes,
                 'simple_graphs': self.simple_graphs,
                 'local_simple_graphs': self.local_simple_graphs}
-        np.savez(path, **data)
+        # Compressed: the per-node local_simple_graphs dominate file size and
+        # compress well. np.load reads compressed npz transparently.
+        np.savez_compressed(path, **data)
     
     
     def _load_graphs(self):
@@ -293,6 +164,231 @@ class SkeletonizedMito:
         self.segment_nodes = data['segment_nodes']
         self.simple_graphs = data['simple_graphs']
         self.local_simple_graphs = data['local_simple_graphs']
+
+
+# --------------------------------------------------------------------------- #
+# Parallel per-frame extraction helpers                                         #
+# --------------------------------------------------------------------------- #
+
+# Populated in the parent process before a fork-based pool is created; worker
+# processes read the full-graph list from here via copy-on-write.
+_WORKER_FULL_GRAPHS = []
+
+
+def _map_frames(worker, items, num_workers, desc):
+    """
+    Apply `worker` to each item (one per frame), preserving order. Runs in a
+    fork-based process pool for real parallelism on CPU-bound igraph work
+    (threads would be serialized by the GIL). Falls back to a serial loop for a
+    single worker or a single frame.
+    """
+    n = len(items)
+    nw = max(1, min(int(num_workers), os.cpu_count() or 1, n))
+    if nw <= 1 or n <= 1:
+        return [worker(it) for it in tqdm(items, desc=desc)]
+
+    ctx = mp.get_context('fork')
+    with ctx.Pool(nw) as pool:
+        return list(tqdm(pool.imap(worker, items), total=n, desc=desc))
+
+
+def _extract_full_graph_one(folder, node_gap_size=0):
+    """Build the full graph + segment nodes for ONE frame folder.
+
+    Construction is fully batched: vertices, vertex attributes and edges are
+    accumulated in Python lists and committed to the igraph object in a single
+    add_vertices / attribute-assignment / add_edges call each. This avoids the
+    per-node add_vertices(1)/add_edge() pattern, which is O(n^2) in python-igraph
+    (every incremental call rebuilds internal structures) and dominated runtime
+    on large frames. The resulting graph is identical to the incremental build:
+    same vertex ids/attributes, same edges (added in the same order), and the
+    same per-segment distances (computed from the .txt coordinates, exactly the
+    values the incremental version read back from the vertices it had just set)."""
+    if len(glob.glob(folder + '/*.coo')) == 1 and len(glob.glob(folder + '/*.gnet')) == 1 and len(glob.glob(folder + '//*.txt')) == 1:
+        simple_graph_coords = _read_array(glob.glob(folder + '/*.coo')[0])
+        segment_node_data = _read_table(glob.glob(folder + '/*.txt')[0], delimiter='\t')
+    else:
+        raise Exception(f"{folder!r} has none/duplicate MitoGraph outputs.")
+
+    simple_graph_coords = _round_coord(simple_graph_coords)
+
+    # KD-tree for fast nearest-node lookup (replaces per-endpoint O(N)
+    # linear search; identical nearest-neighbour / argmin semantics)
+    coord_tree = cKDTree(simple_graph_coords)
+
+    num_base = len(simple_graph_coords)
+
+    # base (degree != 2) node attributes; endpoints get overwritten below
+    coords = list(simple_graph_coords)
+    intensity = [np.nan] * num_base
+    width = [np.nan] * num_base
+
+    line_ids = np.unique(segment_node_data['line_id'])
+    frame_segment_nodes = []
+
+    # group rows by line_id once (replaces per-line O(N) boolean filter)
+    line_groups = {k: v.reset_index() for k, v in segment_node_data.groupby('line_id')}
+
+    edges = []
+    edge_dists = []
+    next_index = num_base  # next bulk-node id to assign
+
+    for line in line_ids:
+        line_nodes = line_groups[line]
+        end_index = len(line_nodes) - 1
+
+        # per-line numpy views (positional indexing avoids slow pandas .loc)
+        xyz = line_nodes.loc[:, 'x':'z'].to_numpy()
+        pint = line_nodes['pixel_intensity'].to_numpy()
+        pwid = line_nodes['width_(um)'].to_numpy()
+
+        # find index of network nodes in .coo based on (rounded) end coords
+        index_end_a = _coord_to_node(coord_tree, _round_coord(xyz[0]))
+        index_end_b = _coord_to_node(coord_tree, _round_coord(xyz[end_index]))
+
+        # overwrite endpoint attributes with the (unrounded) .txt values
+        coords[index_end_a] = xyz[0]
+        intensity[index_end_a] = pint[0]
+        width[index_end_a] = pwid[0]
+        coords[index_end_b] = xyz[end_index]
+        intensity[index_end_b] = pint[end_index]
+        width[index_end_b] = pwid[end_index]
+
+        # walk the segment, emitting bulk nodes/edges; distances use the .txt
+        # coords (== the coordinates the incremental version had just assigned)
+        last_node = index_end_a
+        last_coord = xyz[0]
+        segment_nodes = [index_end_a]
+        sel_node_index = range(0, end_index, 1 + node_gap_size)
+        if len(sel_node_index) == 0:
+            continue
+        last_sel = sel_node_index[-1]
+
+        for index in sel_node_index:
+            # add bulk nodes
+            if index > 0 and index < last_sel:
+                current_node = next_index
+                next_index += 1
+                coords.append(xyz[index])
+                intensity.append(pint[index])
+                width.append(pwid[index])
+
+                edges.append((last_node, current_node))
+                edge_dists.append(np.linalg.norm(last_coord - xyz[index]))
+                last_node = current_node
+                last_coord = xyz[index]
+
+                segment_nodes.append(current_node)
+
+            # link last bulk node to the other network node
+            if index == last_sel:
+                edges.append((last_node, index_end_b))
+                edge_dists.append(np.linalg.norm(last_coord - xyz[end_index]))
+
+                segment_nodes.append(index_end_b)  # get the node index of another end
+                frame_segment_nodes.append(segment_nodes)  # finish this segment
+
+    # commit the graph in bulk
+    full_graph = ig.Graph()
+    full_graph.add_vertices(next_index)
+    full_graph.vs['index'] = list(range(next_index))  # index == vertex id for all nodes
+    full_graph.vs['coordinate'] = coords
+    full_graph.vs['intensity'] = intensity
+    full_graph.vs['width'] = width
+    if edges:
+        full_graph.add_edges(edges, {'distance': edge_dists})
+
+    return full_graph, frame_segment_nodes
+
+
+def _extract_simple_graph_one(folder):
+    """Build the simple graph for ONE frame folder.
+
+    Batched construction (see _extract_full_graph_one): node attributes and the
+    full edge list are committed in one shot instead of per-edge add_edge()
+    calls, which are O(E^2) in python-igraph. Output is identical."""
+    if len(glob.glob(folder+'/*.coo')) == 1 and len(glob.glob(folder+'/*.gnet')) == 1 and len(glob.glob(folder+'//*.txt')) == 1:
+        simple_graph_coords = _read_array(glob.glob(folder+'/*.coo')[0])
+        edge_list = _read_array(glob.glob(folder+'/*.gnet')[0], skiprows=1)
+        segment_node_data = _read_table(glob.glob(folder+'/*.txt')[0], delimiter='\t')
+    else:
+        raise Exception(f"{folder!r} has none/duplicate MitoGraph outputs.")
+
+    simple_graph_coords = _round_coord(simple_graph_coords)
+
+    # KD-tree for fast nearest-node lookup (see extract_full_graphs)
+    coord_tree = cKDTree(simple_graph_coords)
+
+    num_base = len(simple_graph_coords)
+    coords = list(simple_graph_coords)
+    intensity = [np.nan] * num_base
+    width = [np.nan] * num_base
+
+    # create all the network nodes
+    line_ids = np.unique(segment_node_data['line_id'])
+
+    # group rows by line_id once (replaces per-line O(N) boolean filter)
+    line_groups = {k: v.reset_index() for k, v in segment_node_data.groupby('line_id')}
+
+    for line in line_ids:
+        line_nodes = line_groups[line]
+        end_index = len(line_nodes) - 1
+
+        xyz = line_nodes.loc[:, 'x':'z'].to_numpy()
+        pint = line_nodes['pixel_intensity'].to_numpy()
+        pwid = line_nodes['width_(um)'].to_numpy()
+
+        # find index of network nodes in .coo based on (rounded) end coords
+        index_end_a = _coord_to_node(coord_tree, _round_coord(xyz[0]))
+        index_end_b = _coord_to_node(coord_tree, _round_coord(xyz[end_index]))
+
+        coords[index_end_a] = xyz[0]
+        intensity[index_end_a] = pint[0]
+        width[index_end_a] = pwid[0]
+        coords[index_end_b] = xyz[end_index]
+        intensity[index_end_b] = pint[end_index]
+        width[index_end_b] = pwid[end_index]
+
+    simple_graph = ig.Graph()
+    simple_graph.add_vertices(num_base)
+    simple_graph.vs['index'] = list(range(num_base))
+    simple_graph.vs['coordinate'] = coords
+    simple_graph.vs['intensity'] = intensity
+    simple_graph.vs['width'] = width
+
+    if len(edge_list):
+        edges = edge_list[:, :2].astype(int)
+        simple_graph.add_edges([tuple(e) for e in edges], {'distance': edge_list[:, 2]})
+
+    return simple_graph
+
+
+def _extract_local_simple_one(frame_idx):
+    """Build the per-node local simple graphs for ONE frame, reading the frame's
+    full graph from the inherited _WORKER_FULL_GRAPHS global. Verbatim per-frame
+    body of extract_local_simple_graphs()."""
+    frame_full_graphs = _WORKER_FULL_GRAPHS[frame_idx]
+
+    # load graphs of nodes and edges
+    total_num_nodes = len(frame_full_graphs.vs)
+
+    # get fragments
+    all_frags = frame_full_graphs.components()
+
+    # contract edges and update frag and return new root index
+    frame_simple_graphs_per_node = []
+    for node_index in range(total_num_nodes):
+        # use full graph node id
+        frag = frame_full_graphs.induced_subgraph(all_frags[all_frags.membership[node_index]])
+
+        # find fragment graph node id
+        root = frag.vs['index'].index(node_index)
+
+        # contract edges to extract simple graph around the node
+        simple_graph = _contract_edges(frag, root)
+        frame_simple_graphs_per_node.append(simple_graph)
+
+    return frame_simple_graphs_per_node
 
 
 def _contract_edges(frag, root):
@@ -378,29 +474,39 @@ def _contract_edges(frag, root):
             edge_nodes = edge_nodes + nodes
 
     frag.delete_vertices(edge_nodes)
-    frag.simplify(combine_edges='sum')
-
     return frag
-
 
 def _round_coord(coord, decimals=3):
     result = np.round(np.array(coord), decimals)
     return result
 
 
-def _coord_to_node(all_coords, coord):
-    dist = [np.linalg.norm(disp) for disp in all_coords - coord]
-
-    min_node = np.argmin(dist)
-    min_dist = dist[min_node]
-
-    # if min_dist != 0.0:
-    #     warnings.warn(f'Imprecise coordinate mapping with distance equal to {dist}')
-    
-    return min_node
+def _coord_to_node(coord_tree, coord):
+    # nearest network node to `coord`. Uses a prebuilt KD-tree query instead of
+    # an O(N) linear scan; this returns the same argmin-of-Euclidean index.
+    _, min_node = coord_tree.query(np.asarray(coord, dtype=float))
+    return int(min_node)
 
 
-def _clean_graph(g):
-    # remove self-loops, and combine multiple edges just to be safe
-    g.simplify(combine_edges='sum')
-    return g
+def _read_array(path, skiprows=0):
+    """
+    Read a whitespace-delimited numeric file into a 2-D float array.
+
+    The whole file is pulled in with ONE sequential read, then parsed in memory.
+    This is a drop-in, value-identical replacement for `np.loadtxt(path,
+    skiprows=...)` that avoids issuing many tiny read() syscalls, which can be
+    far slower than a single bulk read on uncached network filesystems.
+    """
+    with open(path, 'rb') as f:
+        raw = f.read()
+    return pd.read_csv(io.BytesIO(raw), sep=r'\s+', skiprows=skiprows,
+                       header=None, dtype=np.float64).to_numpy()
+
+
+def _read_table(path, delimiter='\t'):
+    """Read a delimited table with header into a DataFrame, via one bulk read
+    (see `_read_array` for why this matters on uncached network filesystems)."""
+    with open(path, 'rb') as f:
+        raw = f.read()
+    return pd.read_csv(io.BytesIO(raw), delimiter=delimiter)
+

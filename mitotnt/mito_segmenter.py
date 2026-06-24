@@ -1,7 +1,18 @@
 import glob
 import os
+import re
+import subprocess
 import concurrent.futures
 from tqdm.auto import tqdm, trange
+
+
+def _natural_key(path):
+    """Sort key that orders embedded integers numerically, so frame folders
+    sort in true temporal order regardless of zero-padding
+    (e.g. frame_2 before frame_10, not the lexicographic frame_10 before frame_2)."""
+    name = os.path.basename(os.path.normpath(path))
+    return [int(tok) if tok.isdigit() else tok for tok in re.split(r'(\d+)', name)]
+
 
 class MitoSegmenter:
     """
@@ -38,7 +49,9 @@ class MitoSegmenter:
     def __init__(self, data_path: str, pattern: str = "frame", xy_pxl_size: float = 1.0, z_pxl_size: float = 1.0):
 
         self.data_path = data_path
-        self.list_of_folders = [os.path.normpath(f) for f in sorted(glob.glob(f"{self.data_path}/*{pattern}*"))]
+        # Natural sort so unpadded frame folders (frame_0, frame_1, ... frame_10)
+        # are ordered by their numeric index rather than lexicographically.
+        self.list_of_folders = [os.path.normpath(f) for f in sorted(glob.glob(f"{self.data_path}/*{pattern}*"), key=_natural_key)]
         self.num_frames = len(self.list_of_folders)
         self.xy_pxl_size = xy_pxl_size
         self.z_pxl_size = z_pxl_size
@@ -69,9 +82,13 @@ class MitoSegmenter:
         def process_folder(folder):
             if len(glob.glob(folder + '/*.txt')) > 0 and not overwrite:
                 return f"{folder!r} has already been processed"
+            cmd = f"MitoGraph -xy {self.xy_pxl_size} -z {self.z_pxl_size} -path {folder} {extra_params}"
             try:
-                os.system(
-                    f"MitoGraph -xy {str(self.xy_pxl_size)} -z {str(self.z_pxl_size)} -path {folder} {extra_params}")
+                # subprocess.run actually reports a non-zero exit code (os.system
+                # never raises, so a failed MitoGraph would be reported as success).
+                completed = subprocess.run(cmd, shell=True)
+                if completed.returncode != 0:
+                    return f"MitoGraph failed for folder {folder!r} (exit code {completed.returncode})"
                 return f"MitoGraph completed for folder {folder!r}"
             except Exception as e:
                 return f"MitoGraph failed for folder {folder!r}: {e}"
@@ -83,8 +100,7 @@ class MitoSegmenter:
             for future in tqdm(concurrent.futures.as_completed(futures), total=len(futures), desc="Running MitoGraph"):
                 results.append(future.result())
 
-        # Print results in order they were submitted (not finished)
-        for folder, res in zip(self.list_of_folders, results):
+        for res in results:
             print(res)
 
 
@@ -110,9 +126,15 @@ class MitoSegmenter:
         voxel_size = str(self.xy_pxl_size) + ',' + str(self.xy_pxl_size) + ',' + str(self.z_pxl_size)
 
         file_dir = self.data_path+'/check_mitograph.cxc'
-        if os.path.exists(file_dir):
-            os.remove(file_dir)
-        script = open(file_dir, 'x')
+        try:
+            if os.path.exists(file_dir):
+                os.remove(file_dir)
+            
+            script = open(file_dir, 'w')
+        
+        except:
+            print('Cannot write check_mitograph.cxc')
+            return
 
         try:
             commands = []

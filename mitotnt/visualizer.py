@@ -34,7 +34,8 @@ class Visualizer:
 
 
     def generate_chimerax_skeleton(self, start_frame: int = 0, end_frame: int = 5,
-                                   skeleton_colors: list = None, skeleton_size: float=0.03, node_size: float=0.03):
+                                   skeleton_colors: list = None, skeleton_size: float=0.03, node_size: float=0.03,
+                                   show_nodes: str = 'junctions'):
         """
             Export mitochondrial network skeletons to ChimeraX BILD format.
 
@@ -57,12 +58,20 @@ class Visualizer:
                 Cylinder radius for skeleton edges (default is 0.03).
             node_size : float, optional
                 Sphere radius for nodes (default is 0.03).
+            show_nodes : str, optional
+                Which nodes to render as spheres: 'junctions' (only endpoints and
+                branch points, degree != 2; default), 'all', or 'none'. The
+                cylinders already draw the full skeleton, so at the default
+                node_size the interior (degree-2) spheres are redundant; skipping
+                them greatly reduces the primitive count and ChimeraX load time.
 
             Returns
             -------
             None
                 BILD files are written to the directory `self.visual_data_path`.
         """
+        if show_nodes not in ('junctions', 'all', 'none'):
+            raise ValueError("show_nodes must be 'junctions', 'all', or 'none'")
 
         tracking_interval = self.tracked_mito.tracking_interval
 
@@ -91,7 +100,15 @@ class Visualizer:
                         coord_n = _coord_to_str(full_graph.vs[edge.target]['coordinate'])
                         commands.append('.cylinder ' + coord_m + coord_n + str(skeleton_size) + '\n')
 
-                    for node in full_graph.vs:
+                    if show_nodes == 'all':
+                        draw_nodes = full_graph.vs
+                    elif show_nodes == 'junctions':
+                        degrees = full_graph.degree()
+                        draw_nodes = [full_graph.vs[i] for i in range(len(degrees)) if degrees[i] != 2]
+                    else:  # 'none'
+                        draw_nodes = []
+
+                    for node in draw_nodes:
                         coord = _coord_to_str(node['coordinate'])
                         commands.append('.sphere ' + coord + str(node_size) + '\n')
 
@@ -450,9 +467,10 @@ class Visualizer:
 
             print(f"{np.sum(~np.isnan(seg_diffusivity))} segments are mapped out of total {num_segs} segments\n")
 
-            # get normalized diffusivity
+            # .to_numpy() makes indexing positional; the boolean-filtered Series
+            # keeps original row labels, so label-based indexing would be wrong.
             d_max = np.nanpercentile(seg_diffusivity, 90)
-            d_normalized = seg_diffusivity / d_max
+            d_normalized = (seg_diffusivity / d_max).to_numpy()
 
             # make .bild file
             file_dir = self.visual_path+'map_segment_motility_frame_'+str(center_frame).zfill(3)+'.bild'
@@ -511,9 +529,9 @@ class Visualizer:
 
             print(f"{np.sum(~np.isnan(frag_diffusivity))} fragments are mapped out of total {num_frags} fragments\n")
 
-            # get normalized diffusivity
+            # .to_numpy() makes indexing positional (filtered Series keeps original labels)
             d_max = np.nanpercentile(frag_diffusivity, 90)
-            d_normalized = frag_diffusivity / d_max
+            d_normalized = (frag_diffusivity / d_max).to_numpy()
 
             # make .bild file
             file_dir = self.visual_path+'map_fragment_motility_frame_'+str(center_frame).zfill(3)+'.bild'

@@ -149,14 +149,19 @@ class TrackedMito:
             'node_id_before', 'node_id_after', 'frag_id_before','frag_id_after', 'unique_node_id'.
         """
 
-        if start_frame is None:
-            start_frame = self.start_frame + half_win_size
-            
-        if end_frame is None:
-            end_frame = self.end_frame - half_win_size
-
         if tracking_interval is None:
             tracking_interval = self.tracking_interval
+
+        # The sliding window spans half_win_size tracked frames on each side;
+        # tracked frames are spaced by tracking_interval, so the frame-index
+        # margin is half_win_size * tracking_interval.
+        win_margin = half_win_size * tracking_interval
+
+        if start_frame is None:
+            start_frame = self.start_frame + win_margin
+
+        if end_frame is None:
+            end_frame = self.end_frame - win_margin
 
         full_graphs_all_frames = self.full_graphs
 
@@ -164,10 +169,10 @@ class TrackedMito:
         tracks.loc[:,'frame_id'] = tracks.loc[:,'frame_id'].astype(int)
         tracks.loc[:,'frame_frag_id'] = tracks.loc[:,'frame_frag_id'].astype(int)
 
-        if start_frame < half_win_size:
-            raise Exception(f"start_frame must be >= half_win_size but start_frame is {start_frame} and half_win_size is {half_win_size}")
-        if end_frame > self.end_frame - half_win_size:
-            raise Exception(f"end_frame must be <= self.num_frames - half_win_size but end_frame is {end_frame} and self.num_frames - half_win_size is {self.num_frames-half_win_size}")
+        if start_frame < win_margin:
+            raise Exception(f"start_frame must be >= half_win_size*tracking_interval but start_frame is {start_frame} and half_win_size*tracking_interval is {win_margin}")
+        if end_frame > self.end_frame - win_margin:
+            raise Exception(f"end_frame must be <= end_frame - half_win_size*tracking_interval but end_frame is {end_frame} and the limit is {self.end_frame-win_margin}")
 
         all_fragments = []
         for frame in range(0, self.num_frames):
@@ -178,22 +183,46 @@ class TrackedMito:
         event_list = []
         node_list = []
 
+        # Precompute per-node trajectories and per-frame slices once, keyed for
+        # O(1) lookup, instead of re-filtering the full tracks table for every
+        # node and frame inside the window loop (which made this O(num_nodes^2)).
+        track_groups = {uid: g for uid, g in tracks.groupby('unique_node_id')}
+        frame_groups = {fid: g for fid, g in tracks.groupby('frame_id')}
+        # per-node frame_id -> (frame_node_id, frame_frag_id), so the forward/
+        # backward window scans are O(1) dict lookups rather than per-frame
+        # boolean indexing of a sub-DataFrame.
+        track_frame_map = {
+            uid: dict(zip(g['frame_id'].to_numpy(),
+                          zip(g['frame_node_id'].to_numpy(), g['frame_frag_id'].to_numpy())))
+            for uid, g in track_groups.items()}
+
         print('Performing fusion and fission event detection ...')
         for current_frame in trange(start_frame, end_frame, tracking_interval, desc="Detecting events per sliding window"):
 
-            frame_tracks = tracks[tracks['frame_id']==current_frame]
+            frame_tracks = frame_groups.get(current_frame, tracks.iloc[:0])
             frame_node_id = frame_tracks['frame_node_id'].tolist()
             unique_nodes = frame_tracks['unique_node_id'].tolist()
             frame_nodes = frame_tracks['frame_node_id'].tolist()
             frame_to_unique = {frame_nodes[i]:unique_nodes[i] for i in range(len(frame_nodes))}
             unique_to_frame = {unique_nodes[i]:frame_nodes[i] for i in range(len(unique_nodes))}
+            # per-frame node -> connected-neighbours string, for O(1) edge lookup below
+            frame_connected = dict(zip(frame_tracks['unique_node_id'],
+                                       frame_tracks['connected_unique_node_id']))
 
             current_fragments = all_fragments[current_frame]
-            for frag_id in range(len(current_fragments)):
-                all_frag_frame_nodes = current_fragments[frag_id]
+            # Group tracked frame-nodes by their fragment via the precomputed
+            # component membership (O(1) per node), instead of scanning all frame
+            # nodes for every fragment (which made this O(num_nodes * num_frags)).
+            membership = current_fragments.membership
+            frag_to_tracked = {}
+            for n in frame_node_id:
+                frag_to_tracked.setdefault(membership[n], []).append(n)
 
-                # frame node id that are both tracked and belong to this fragment
-                frag_frame_nodes = [n for n in frame_node_id if n in all_frag_frame_nodes]
+            for frag_id in range(len(current_fragments)):
+                # tracked frame-nodes on this fragment, in frame_node_id order
+                frag_frame_nodes = frag_to_tracked.get(frag_id, [])
+                if not frag_frame_nodes:
+                    continue  # no tracked nodes on this fragment -> no events
 
                 # find the unique id for tracked nodes on this fragment
                 frag_unique_nodes = [frame_to_unique[f] for f in frag_frame_nodes]
@@ -202,17 +231,15 @@ class TrackedMito:
                 forward_track_node_list, backward_track_node_list = [], []
                 forward_track_frag_list, backward_track_frag_list = [], []
                 for track_id in frag_unique_nodes:
-                    node_track = tracks[tracks['unique_node_id']==track_id]
-                    track_frames = node_track['frame_id'].to_numpy()
+                    fmap = track_frame_map[track_id]
 
-                    # get the frag list for the next half_win_size frames
+                    # get the frag list for the next half_win_size tracked frames
+                    # (tracked frames are spaced by tracking_interval)
                     track_node_list, track_frag_list = [], []
-                    for frame in range(current_frame+1, current_frame+half_win_size+1, 1):
-                        if frame in track_frames:
-                            node_frame_track = node_track[track_frames==frame]
-                            node_id = node_frame_track['frame_node_id'].tolist()[0]
+                    for frame in range(current_frame+tracking_interval, current_frame+half_win_size*tracking_interval+1, tracking_interval):
+                        if frame in fmap:
+                            node_id, frame_frag_id = fmap[frame]
                             track_node_list.append(node_id)
-                            frame_frag_id = node_frame_track['frame_frag_id'].tolist()[0]
                             track_frag_list.append(frame_frag_id)
                         else:
                             track_node_list.append(np.nan)
@@ -220,14 +247,12 @@ class TrackedMito:
                     forward_track_node_list.append(track_node_list)
                     forward_track_frag_list.append(track_frag_list)
 
-                    # get the frag list for the past half_win_size frames
+                    # get the frag list for the past half_win_size tracked frames
                     track_node_list, track_frag_list = [], []
-                    for frame in range(current_frame-1, current_frame-half_win_size-1, -1):
-                        if frame in track_frames:
-                            node_frame_track = node_track[track_frames==frame]
-                            node_id = node_frame_track['frame_node_id'].tolist()[0]
+                    for frame in range(current_frame-tracking_interval, current_frame-half_win_size*tracking_interval-1, -tracking_interval):
+                        if frame in fmap:
+                            node_id, frame_frag_id = fmap[frame]
                             track_node_list.append(node_id)
-                            frame_frag_id = node_frame_track['frame_frag_id'].tolist()[0]
                             track_frag_list.append(frame_frag_id)
                         else:
                             track_node_list.append(np.nan)
@@ -243,8 +268,7 @@ class TrackedMito:
                 unique_to_index = {frag_unique_nodes[i]:i for i in range(len(frag_unique_nodes))}
 
                 for node in frag_unique_nodes:
-                    this_track = frame_tracks[frame_tracks['unique_node_id']==node]
-                    neighs_str = this_track['connected_unique_node_id'].tolist()[0]
+                    neighs_str = frame_connected[node]
 
                     neighs = []
                     if pd.isna(neighs_str):
@@ -292,10 +316,13 @@ class TrackedMito:
                     cluster_next_frame_id, cluster_next_frame_node_id, cluster_next_frame_frag_id = [], [], []
                     for node in cluster:
                         unique_id = frame_to_unique[node]
-                        node_track = tracks[tracks['unique_node_id']==unique_id]
+                        node_track = track_groups[unique_id]
                         track_frames = node_track['frame_id'].to_numpy()
 
-                        next_frame = track_frames[int(np.argwhere(track_frames==current_frame)) + 1]
+                        cur_pos = np.argwhere(track_frames == current_frame)[0, 0]
+                        if cur_pos + 1 >= len(track_frames):
+                            continue  # this node's track ends at current_frame; no next frame
+                        next_frame = track_frames[cur_pos + 1]
                         next_track = node_track[track_frames==next_frame]
                         next_frame_node_id = next_track['frame_node_id'].tolist()[0]
                         next_frame_frag_id = next_track['frame_frag_id'].tolist()[0]
@@ -314,10 +341,13 @@ class TrackedMito:
                     cluster_last_frame_id, cluster_last_frame_node_id, cluster_last_frame_frag_id = [], [], []
                     for node in cluster:
                         unique_id = frame_to_unique[node]
-                        node_track = tracks[tracks['unique_node_id']==unique_id]
+                        node_track = track_groups[unique_id]
                         track_frames = node_track['frame_id'].to_numpy()
 
-                        last_frame = track_frames[int(np.argwhere(track_frames==current_frame)) - 1]
+                        cur_pos = np.argwhere(track_frames == current_frame)[0, 0]
+                        if cur_pos == 0:
+                            continue  # this node's track starts at current_frame; no previous frame
+                        last_frame = track_frames[cur_pos - 1]
                         last_track = node_track[track_frames==last_frame]
                         last_frame_node_id = last_track['frame_node_id'].tolist()[0]
                         last_frame_frag_id = last_track['frame_frag_id'].tolist()[0]
@@ -368,8 +398,17 @@ class TrackedMito:
                                           'unique_node_id':frame_to_unique[fusion_clusters[i][j]],
                                           'frag_id':fusion_frags_last_frame[i][j]})
 
+        event_cols = ['type', 'frame_id', 'frame_id_before', 'frame_id_after',
+                      'node_id_before', 'node_id_after', 'frag_id_before',
+                      'frag_id_after', 'unique_node_id']
         event_list = pd.DataFrame.from_dict(event_list)
-        event_list.sort_values('frame_id', inplace=True)
+        if len(event_list) == 0:
+            # No fusion/fission events detected (e.g. too few frames for the
+            # sliding window: detection needs >= 2*half_win_size+1 frames).
+            # Write an empty, well-formed table instead of crashing on sort.
+            event_list = pd.DataFrame(columns=event_cols)
+        else:
+            event_list.sort_values('frame_id', inplace=True)
         event_list.to_csv(self.save_path+'remodeling_events.csv', index=False)
         self.remodeling_events = event_list
 
@@ -478,30 +517,42 @@ class TrackedMito:
         tracks = self.node_tracks
         num_tracks = int(np.max(tracks['unique_node_id'])) + 1
 
+        # Precompute per-track rows once (keyed by unique_node_id) to avoid
+        # re-filtering the full node_tracks table for every track (was O(N^2)).
+        track_groups = {uid: g for uid, g in tracks.groupby('unique_node_id')}
+
         all_msd = []
         for track_id in trange(num_tracks, desc="Computing node diffusivity for all tracks"):
-            track = tracks[tracks['unique_node_id']==track_id]
+            track = track_groups[track_id]
             frames = track['frame_id'].to_numpy()
             coords = track.loc[:,'x':'z'].to_numpy()
-            coords = coords
 
-            # Calculate TA-MSD
+            # frame_id -> row index (first occurrence, matching list.index) for
+            # O(1) lookups instead of rebuilding frames.tolist().index() per step
+            frame_pos = {}
+            for _p, _f in enumerate(frames):
+                frame_pos.setdefault(int(_f), _p)
+            last_frame = frames[-1]
+
+            # Calculate TA-MSD. tau counts tracking steps; tracked frames are
+            # spaced by tracking_interval, so the frame-index lag is tau * ti.
+            ti = self.tracking_interval
             track_msd = []
             for tau in range(1, max_tau):
 
+                lag = tau * ti
                 disp = []
                 frame = 0
-                next_frame = frame + tau
+                next_frame = frame + lag
 
-                while next_frame < frames[-1]:
-                    if next_frame in frames and frame in frames:
-                        node = frames.tolist().index(frame)
-                        next_node = frames.tolist().index(next_frame)
-
+                while next_frame < last_frame:
+                    next_node = frame_pos.get(next_frame)
+                    node = frame_pos.get(frame)
+                    if next_node is not None and node is not None:
                         disp.append(np.sum((coords[next_node]-coords[node])**2))
 
                     frame += 1 # next start frame
-                    next_frame = frame + tau
+                    next_frame = frame + lag
 
                 if len(disp) < 2:
                     break
@@ -532,10 +583,12 @@ class TrackedMito:
             else:
                 n_points = len(eata_msd)
 
-            all_tau = np.arange(0, n_points * self.frame_interval, self.frame_interval)[:,np.newaxis]
+            # each lag step spans tracking_interval frames in time
+            step_time = self.tracking_interval * self.frame_interval
+            all_tau = np.arange(0, n_points * step_time, step_time)[:,np.newaxis]
             slope, res, rnk, s = lstsq(all_tau[:n_points], eata_msd[:n_points])
             d = slope[0] / 6
-            msd_per_frame = 6 * d * self.frame_interval
+            msd_per_frame = 6 * d * step_time
 
             # get r^2
             msd_mean = np.mean(eata_msd[:n_points])
@@ -606,6 +659,9 @@ class TrackedMito:
         # load inputs
         tracks = self.node_tracks
         segment_nodes_all_frames = self.segment_nodes
+        # per-track rows once (keyed by unique_node_id), to avoid re-filtering the
+        # full node_tracks table per node per segment per center frame (was O(N^2)).
+        track_groups = {uid: g for uid, g in tracks.groupby('unique_node_id')}
 
         seg_diffusivity = []
 
@@ -629,11 +685,13 @@ class TrackedMito:
 
                 for node_id, frame_node in enumerate(segment):
                     if frame_node in frame_to_unique.keys():
-                        full_track = tracks[tracks.unique_node_id==frame_to_unique[frame_node]]
+                        full_track = track_groups[frame_to_unique[frame_node]]
+                        ft_frames = full_track['frame_id'].to_numpy()
+                        ft_coords = full_track.loc[:,'x':'z'].to_numpy()
 
-                        for i in range(len(full_track)):
-                            frame = int(full_track.iloc[i]['frame_id'])
-                            coord = full_track.iloc[i]['x':'z'].to_numpy()
+                        for i in range(len(ft_frames)):
+                            frame = int(ft_frames[i])
+                            coord = ft_coords[i]
                             arr_index = frame - (center_frame - half_win_size)
 
                             if arr_index < 2*half_win_size and arr_index >= 0:
@@ -641,13 +699,17 @@ class TrackedMito:
                             else:
                                 break
 
-                # Calculate TA-MSD
+                # Calculate TA-MSD. tau counts tracking steps; window columns are
+                # raw frames, so the column lag is tau * tracking_interval
+                # (untracked columns are skipped automatically).
+                ti = self.tracking_interval
                 seg_msd, seg_tau = [], []
                 for tau in range(1, max_tau):
 
+                    lag = tau * ti
                     disp = []
                     frame = 0
-                    next_frame = frame + tau
+                    next_frame = frame + lag
 
                     while next_frame < 2 * half_win_size:
                         coords_m = seg_coords[:,frame]
@@ -663,7 +725,7 @@ class TrackedMito:
                             disp.append(average_disp)
 
                         frame += 1 # next start frame
-                        next_frame = frame + tau
+                        next_frame = frame + lag
 
                     if len(disp) < 2:
                         break
@@ -673,9 +735,6 @@ class TrackedMito:
 
                 all_msd.append(seg_msd)
                 all_tau.append(seg_tau)
-
-            # print('Percent of segments tracked around center frame', center_frame, ':',
-            #       (1 - np.sum([len(msd)==0 for msd in all_msd]) / len(all_msd)) * 100, '%')
 
             # compute diffusivity from MSD
             num_msd = len(all_msd)
@@ -700,10 +759,11 @@ class TrackedMito:
                 else:
                     n_points = len(eata_msd)
 
-                all_tau = np.arange(0, n_points * self.frame_interval, self.frame_interval)[:,np.newaxis]
+                step_time = self.tracking_interval * self.frame_interval
+                all_tau = np.arange(0, n_points * step_time, step_time)[:,np.newaxis]
                 slope, res, rnk, s = lstsq(all_tau[:n_points], eata_msd[:n_points])
                 d = slope[0] / 6
-                msd_per_frame = 6 * d * self.frame_interval
+                msd_per_frame = 6 * d * step_time
 
                 # get r^2
                 msd_mean = np.mean(eata_msd[:n_points])
@@ -736,7 +796,7 @@ class TrackedMito:
             Maximum time lag (in frames) for MSD calculation (default is 5).
         tracked_ratio : float, optional
             Minimum fraction of fragment nodes that must be tracked at a given lag
-            for the fragment displacement to be considered (default is 0.3).
+            for the fragment displacement to be considered (default is 0.5).
         half_win_size : int, optional
             Half-width of the temporal window (in frames) around each center frame
             used for displacement calculations (default is 10).
@@ -773,6 +833,9 @@ class TrackedMito:
         # load inputs
         tracks = self.node_tracks
         full_graphs_all_frames = self.full_graphs
+        # per-track rows once (keyed by unique_node_id), to avoid re-filtering the
+        # full node_tracks table per node per fragment per center frame (was O(N^2)).
+        track_groups = {uid: g for uid, g in tracks.groupby('unique_node_id')}
 
         frag_diffusivity = []
 
@@ -798,11 +861,13 @@ class TrackedMito:
 
                 for node_id, frame_node in enumerate(fragment):
                     if frame_node in frame_to_unique.keys():
-                        full_track = tracks[tracks.unique_node_id == frame_to_unique[frame_node]]
+                        full_track = track_groups[frame_to_unique[frame_node]]
+                        ft_frames = full_track['frame_id'].to_numpy()
+                        ft_coords = full_track.loc[:,'x':'z'].to_numpy()
 
-                        for i in range(len(full_track)):
-                            frame = int(full_track.iloc[i]['frame_id'])
-                            coord = full_track.iloc[i]['x':'z'].to_numpy()
+                        for i in range(len(ft_frames)):
+                            frame = int(ft_frames[i])
+                            coord = ft_coords[i]
                             arr_index = frame - (center_frame - half_win_size)
 
                             if arr_index < 2 * half_win_size and arr_index >= 0:
@@ -810,13 +875,17 @@ class TrackedMito:
                             else:
                                 break
 
-                # Calculate TA-MSD
+                # Calculate TA-MSD. tau counts tracking steps; window columns are
+                # raw frames, so the column lag is tau * tracking_interval
+                # (untracked columns are skipped automatically).
+                ti = self.tracking_interval
                 frag_msd, frag_tau = [], []
                 for tau in range(1, max_tau):
 
+                    lag = tau * ti
                     disp = []
                     frame = 0
-                    next_frame = frame + tau
+                    next_frame = frame + lag
 
                     while next_frame < 2 * half_win_size:
                         coords_m = frag_coords[:, frame]
@@ -833,7 +902,7 @@ class TrackedMito:
                             disp.append(average_disp)
 
                         frame += 1  # next start frame
-                        next_frame = frame + tau
+                        next_frame = frame + lag
 
                     if len(disp) < 2:
                         break
@@ -843,9 +912,6 @@ class TrackedMito:
 
                 all_msd.append(frag_msd)
                 all_tau.append(frag_tau)
-
-            # print('Percent of fragments tracked around center frame', center_frame, ':',
-            #       (1 - np.sum([len(msd) == 0 for msd in all_msd]) / len(all_msd)) * 100, '%')
 
             # compute diffusivity from MSD
             num_msd = len(all_msd)
@@ -872,10 +938,11 @@ class TrackedMito:
                 else:
                     n_points = len(eata_msd)
 
-                all_tau = np.arange(0, n_points * self.frame_interval, self.frame_interval)[:, np.newaxis]
+                step_time = self.tracking_interval * self.frame_interval
+                all_tau = np.arange(0, n_points * step_time, step_time)[:, np.newaxis]
                 slope, res, rnk, s = lstsq(all_tau[:n_points], eata_msd[:n_points])
                 d = slope[0] / 6
-                msd_per_frame = 6 * d * self.frame_interval
+                msd_per_frame = 6 * d * step_time
 
                 # get r^2
                 msd_mean = np.mean(eata_msd[:n_points])

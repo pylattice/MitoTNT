@@ -4,6 +4,11 @@ import numpy as np
 import pandas as pd
 from tqdm.auto import tqdm, trange
 from scipy.optimize import linear_sum_assignment as lap_solver
+from scipy.spatial import cKDTree
+from scipy.sparse import coo_matrix
+from scipy.sparse.csgraph import min_weight_full_bipartite_matching
+import lap  # sparse Jonker-Volgenant (lapmod) for large sparse assignment problems
+import multiprocessing as mp
 from fastdist import fastdist
 from mitotnt.skeletonized_mito import SkeletonizedMito
 from mitotnt.tracked_mito import TrackedMito
@@ -87,7 +92,8 @@ class NetworkTracker:
                  start_frame: int = 0, end_frame: int = None, tracking_interval: int = 1,
                  cutoff_num_neighbor: int = 10, cutoff_speed: float = None,
                  graph_matching_depth: int = 2, dist_exponent: int = 1, top_exponent: int = 1,
-                 min_track_size: int = 4, max_gap_size: int = 3, block_size_factor: float = 1.0):
+                 min_track_size: int = 4, max_gap_size: int = 3, block_size_factor: float = 1.0,
+                 num_workers: int = 20):
 
         self.segmented_mito = segmented_mito
         self.start_frame = start_frame
@@ -96,7 +102,7 @@ class NetworkTracker:
         else:
             self.end_frame = end_frame
         if frame_interval is None:
-            raise Exception()
+            raise ValueError("frame_interval (seconds per frame) is required and must be provided.")
         self.frame_interval = frame_interval
         self.tracking_interval = tracking_interval
         self.cutoff_num_neighbor = cutoff_num_neighbor
@@ -107,6 +113,10 @@ class NetworkTracker:
         self.min_track_size = min_track_size
         self.max_gap_size = max_gap_size
         self.block_size_factor = block_size_factor
+        # Bound the worker count so the process pools stay sane on shared machines.
+        self.num_workers = max(1, min(int(num_workers), 20))
+        # Per-stage wall-clock accumulators, filled during run().
+        self._timing = {}
 
 
     def reload_results(self):
@@ -173,11 +183,15 @@ class NetworkTracker:
         linked_nodes, terminated_nodes, initiated_nodes = [], [], []
         terminated_tracks, ongoing_tracks = [], []
 
+        # per-stage timing accumulators (seconds)
+        self._timing = {'candidates': 0.0, 'topology': 0.0, 'lap': 0.0,
+                        'postfilter': 0.0, 'gap_closing': 0.0, 'save': 0.0}
+
         num_frames = len(full_graphs_all_frames)
         if self.end_frame > num_frames:
+            warnings.warn(f"The end frame specified ({self.end_frame}) is greater than the number of frames "
+                          f"in tracking inputs ({num_frames}). End frame has been clamped to {num_frames - 1}.")
             self.end_frame = num_frames - 1
-            warnings.warn("The end frame specified is less than the number of frames in tracking inputs. "
-                          "End frame has been changed to the maximum number of frames.")
 
         for frame in trange(self.start_frame, self.end_frame - self.tracking_interval, self.tracking_interval, desc="Frame-to-frame network tracking"):
 
@@ -196,16 +210,17 @@ class NetworkTracker:
             coords_m, coords_n = full_graph_m.vs['coordinate'], full_graph_n.vs['coordinate']
 
             # warnings for unusual mitograph outputs
-            max_number = 5000
+            max_number = 50000
             if number_m > max_number or number_n > max_number:
-                warnings.warn("The number of nodes is relatively large and may take longer time to process! "
-                              "Recommend to crop a smaller region. Alternatively you can increase node_gap_size during generate_tracking_inputs.generate()")
+                warnings.warn(
+                    f"Large frame: up to {max(number_m, number_n)} nodes (> {max_number}); tracking will be slower. "
+                    "To reduce the node count, increase node_gap_size in SkeletonizedMito.extract_graphs().")
 
             fluctuation_percent_max = 30
-            fluctuation_percent = round(abs(number_n - number_m) / number_m, 3) * 100
+            fluctuation_percent = abs(number_n - number_m) / number_m * 100
             if fluctuation_percent > fluctuation_percent_max:
                 warnings.warn(
-                    f"The number of nodes changes by {fluctuation_percent}% between the two frames. "
+                    f"The number of nodes changes by {fluctuation_percent:.1f}% between the two frames. "
                     "Please check for imaging or segmentation artifacts.")
 
             # get properties
@@ -246,98 +261,83 @@ class NetworkTracker:
                         node_to_segment_n[b] = segment_id
             ### Finish data loading ###
 
-            ### Calculate distance cost matrix ###
+            ### Calculate sparse candidate links (replaces dense distance matrix) ###
+            # Avoid the dense (m x n) distance matrix and its per-row sort: a
+            # KD-tree keeps only each m-node's nearest candidate n-nodes,
+            # reproducing the neighbour + displacement cutoffs (modulo arbitrary
+            # tie-breaking at exactly the cutoff distance) while staying sparse.
             cost_start = time.time()
 
-            coords_m_mat = np.array(coords_m)
-            coords_n_mat = np.array(coords_n)
-            dist_cost_mat = fastdist.matrix_to_matrix_distance(coords_m_mat, coords_n_mat, fastdist.euclidean, 'euclidean')
+            coords_m_mat = np.asarray(coords_m, dtype=float)
+            coords_n_mat = np.asarray(coords_n, dtype=float)
 
-            min_dists = []
+            tree_n = cKDTree(coords_n_mat)
 
-            # neighbor cutoff
-            for i in range(number_m):
-                row = dist_cost_mat[i, :]
-                if len(row) > self.cutoff_num_neighbor:
-                    neighbor_cutoff = sorted(row)[self.cutoff_num_neighbor]
-                    row[row > neighbor_cutoff] = np.nan
-                    dist_cost_mat[i, :] = row
+            # nearest-neighbour distance per m-node -> displacement cutoff
+            nn_dist, _ = tree_n.query(coords_m_mat, k=1, workers=self.num_workers)
+            nn_dist = np.atleast_1d(np.asarray(nn_dist, dtype=float))
 
-                min_dists.append(np.nanmin(row))
-
-            # displacement cutoff
             if self.cutoff_speed is None:
-                valid_min_dists = [d for d in min_dists if not np.isnan(d)]
-                if len(valid_min_dists) == 0:
-                    disp_cutoff = np.inf  # no valid distances found
+                if nn_dist.size == 0:
+                    disp_cutoff = np.inf
                 else:
-                    disp_cutoff = np.mean(min_dists) + 3 * np.std(min_dists)  # global estimate based on all nodes
+                    disp_cutoff = np.mean(nn_dist) + 3 * np.std(nn_dist)  # global estimate based on all nodes
             else:
                 disp_cutoff = self.cutoff_speed * self.frame_interval
 
-            dist_cost_mat[dist_cost_mat > disp_cutoff] = np.nan
+            # Keep up to (cutoff_num_neighbor + 1) nearest n-nodes within disp_cutoff.
+            # The +1 reproduces the original `sorted(row)[cutoff_num_neighbor]` threshold,
+            # which retains the (cutoff_num_neighbor + 1) smallest distances.
+            k_query = min(self.cutoff_num_neighbor + 1, number_n)
+            cand_dist, cand_idx = tree_n.query(coords_m_mat, k=k_query, workers=self.num_workers)
+            if k_query == 1:
+                cand_dist = cand_dist[:, None]
+                cand_idx = cand_idx[:, None]
 
-            valid_node_pairs = np.argwhere(~np.isnan(dist_cost_mat))
-            cost_end = time.time()
-            # print('Distance cost matrix takes {:.2f} s'.format(cost_end - cost_start))
-            ### Distance matrix complete ###
+            keep = cand_dist <= disp_cutoff
+            cand_i = np.repeat(np.arange(number_m), k_query)[keep.ravel()]
+            cand_j = cand_idx.ravel()[keep.ravel()].astype(np.int64)
+            cand_d = cand_dist.ravel()[keep.ravel()]
 
-            ### Calculate topology cost matrix ###
+            self._timing['candidates'] += time.time() - cost_start
+            ### Candidate links complete ###
+
+            ### Calculate topology cost for candidate pairs only ###
+            cost_start = time.time()
+            cand_topo = self._compute_topology_costs(cand_i, cand_j,
+                                                     simple_graphs_m, simple_graphs_n)
+            self._timing['topology'] += time.time() - cost_start
+            ### Topology complete ###
+
+            ### Build sparse cost terms and solve LAP ###
             cost_start = time.time()
 
-            topology_cost_mat = np.empty([number_m, number_n])
-            topology_cost_mat[:] = np.nan
+            # add pseudo-counts for zero scores (reproduces dense `+= 0.01 * nanmax`)
+            max_dist = cand_d.max() if cand_d.size else 0.0
+            max_topo = cand_topo.max() if cand_topo.size else 0.0
+            pdist = cand_d + 0.01 * max_dist
+            ptopo = cand_topo + 0.01 * max_topo
 
-            for i, j in valid_node_pairs:
-                topology_cost_mat[i, j] = _local_graph_comparison_score(self.graph_matching_depth, i, j, simple_graphs_m, simple_graphs_n)
+            # linking cost for each candidate pair
+            link_cost = pdist ** self.dist_exponent * ptopo ** self.top_exponent
 
-            cost_end = time.time()
-            # print('Topology cost matrix takes {:.2f} s'.format(cost_end - cost_start))
-            ### Topology matrix complete ###
+            # sparse stand-in for the dense (pseudo-counted) distance matrix used
+            # downstream during segment-based filtering / arrow correction
+            dist_cost_mat = _SparseDist(cand_i, cand_j, pdist, number_m, number_n)
 
-            ### Build final cost matrix ###
-            # add pseudo-counts for zero scores
-            dist_cost_mat += 0.01 * np.nanmax(dist_cost_mat.ravel())
-            topology_cost_mat += 0.01 * np.nanmax(topology_cost_mat.ravel())
+            # Solve the linear assignment problem on the sparse augmented bipartite
+            # graph (links + termination + initiation + candidate-pattern auxiliary
+            # block). This is mathematically equivalent to the dense formulation:
+            # the auxiliary block uses constant cost C = min(link_cost) on exactly
+            # the candidate pattern, and for every link (i, j) the symmetric edge
+            # (birth_j -> death_i) exists, so any link set feasible in the dense
+            # problem is feasible here at identical cost.
+            assignment = _solve_lap_sparse(cand_i, cand_j, link_cost, number_m, number_n)
 
-            # construct linking cost matrix based on three matrics and relative scaling
-            cost_m_n = dist_cost_mat ** self.dist_exponent * topology_cost_mat ** self.top_exponent
+            self._timing['lap'] += time.time() - cost_start
+            ### LAP solved ###
 
-            # construct termination cost matrix
-            cost_m_m = np.empty([number_m, number_m])
-            cost_m_m[:] = np.nan
-            for i in range(number_m):
-                row = cost_m_n[i, :]
-                if np.isnan(row).all():
-                    cost_m_m[i, i] = 0  # must be assigned to itself since all other nodes exceed max radius
-                else:
-                    min_cost = np.nanmin(row)
-                    cost_m_m[i, i] = 3 * min_cost
-
-            # construct initiation cost matrix
-            cost_n_n = np.empty([number_n, number_n])
-            cost_n_n[:] = np.nan
-            for j in range(number_n):
-                column = cost_m_n[:, j]
-                if np.isnan(column).all():
-                    cost_n_n[j, j] = 0  # must be assigned to itself since all other nodes exceed max radius
-                else:
-                    min_cost = np.nanmin(column)
-                    cost_n_n[j, j] = 3 * min_cost
-
-            # construct auxiliary block
-            cost_n_m = cost_m_n.T.copy()
-            cost_n_m[:] = np.nanmin(cost_m_n)  # this matrix is needed for LAP solver but not used for tracking
-
-            # assemble into one matrix
-            left_block = np.concatenate((cost_m_n, cost_n_n), axis=0)
-            right_block = np.concatenate((cost_m_m, cost_n_m), axis=0)
-            cost_matrix = np.concatenate((left_block, right_block), axis=1)
-            cost_matrix[np.isnan(cost_matrix)] = np.inf  # blocking values
-            ### Final matrix is complete ###
-
-            ### Solve LAP ###
-            assignment = lap_solver(cost_matrix)[1]
+            _postfilter_start = time.time()
 
             ### Remove unrealistic tracking ###
             assigned_m = assignment[:number_m]  # find linked nodes at frame m, n
@@ -348,6 +348,11 @@ class NetworkTracker:
                     linked_m.append(i)
                     linked_n.append(assigned_m[i])
 
+            # Membership sets (linked_m is also used as an ordered list elsewhere
+            # via .index(), so keep both). Avoids O(seg * |linked_m|) list scans.
+            linked_m_set = set(linked_m)
+            branching_nodes_m_set = set(branching_nodes_m)
+
             filtered_nodes = []
             for segment_id in range(len(all_segment_nodes_m)):  # segment consists of segment nodes
 
@@ -355,7 +360,7 @@ class NetworkTracker:
 
                 # find only linked nodes in the segment
                 current_seg_nodes_m = np.array(
-                    [node for node in segment_nodes_m if node in linked_m and node not in branching_nodes_m])
+                    [node for node in segment_nodes_m if node in linked_m_set and node not in branching_nodes_m_set])
 
                 if len(current_seg_nodes_m) == 0:
                     continue
@@ -453,8 +458,11 @@ class NetworkTracker:
             # update assignment after filtering
             assignment_filtered = assignment.copy()
 
+            # map each linked m-node to its n-node (linked_m entries are unique),
+            # avoiding a linear linked_m.index() per filtered node
+            linked_m_to_n = dict(zip(linked_m, linked_n))
             for index_m in filtered_nodes:
-                index_n = linked_n[linked_m.index(index_m)]
+                index_n = linked_m_to_n[index_m]
                 # set the linked node to initiated
                 assignment_filtered[number_m + index_n] = index_n
                 # set the node to terminated
@@ -487,14 +495,12 @@ class NetworkTracker:
 
             max_linked = min(number_m, number_n)
             percent_linked_min = 70
-            percent_linked = round(len(linked) / max_linked, 3) * 100
+            percent_linked = len(linked) / max_linked * 100
 
             if percent_linked < percent_linked_min:
                 warnings.warn(
-                    f"Only {percent_linked}% of the {max_linked} nodes are tracked. "
+                    f"Only {percent_linked:.1f}% of the {max_linked} nodes are tracked. "
                     "This is likely due to large distance or inconsistent topology between the two frames.")
-
-            # print(f"Mean speed for tracked nodes: {(np.nanmean(dist_cost_assigned) / self.frame_interval):2f} μm/s")
 
             if (np.mean(dist_cost_assigned) / self.frame_interval) >= 1.0:
                 warnings.warn(
@@ -507,13 +513,18 @@ class NetworkTracker:
             ### Update tracks ###
             nodes_m, nodes_n = linked[:, 0].tolist(), linked[:, 1].tolist()
             tracks_to_remove = []
+            # O(1) lookups for the per-track update below (nodes_m are unique
+            # m-node indices; terminated is a node-index array): replaces a
+            # linear nodes_m.index() and an array `in` scan per ongoing track.
+            m_to_n = dict(zip(nodes_m, nodes_n))
+            terminated_set = set(terminated.tolist())
 
             if frame == self.start_frame:
                 for i in range(len(nodes_m)):
                     # initiate with first two frames
                     ongoing_tracks.append([[frame, frame + self.tracking_interval],
                                            [nodes_m[i], nodes_n[i]],
-                                           [node_to_segment_m[nodes_m[i]], node_to_segment_n[nodes_n[i]]],
+                                           [node_to_segment_m.get(nodes_m[i],np.nan),node_to_segment_n.get(nodes_n[i],np.nan)],
                                            [cc_m.membership[nodes_m[i]], cc_n.membership[nodes_n[i]]],
                                            [coords_m[nodes_m[i]], coords_n[nodes_n[i]]],
                                            [intensity_m[nodes_m[i]], intensity_n[nodes_n[i]]],
@@ -522,37 +533,48 @@ class NetworkTracker:
             else:
                 for idx, track in enumerate(ongoing_tracks):
                     # if terminated, remove track; else append linked node
-                    if track[1][-1] in terminated:
+                    if track[1][-1] in terminated_set:
                         terminated_tracks.append(track)
                         tracks_to_remove.append(idx)
                     else:
-                        linked_index = nodes_m.index(track[1][-1])
-                        linked_node = nodes_n[linked_index]
+                        linked_node = m_to_n[track[1][-1]]
                         track[0].append(frame + self.tracking_interval)
                         track[1].append(linked_node)
-                        track[2].append(node_to_segment_n[linked_node])
+                        track[2].append(node_to_segment_n.get(linked_node,np.nan))
                         track[3].append(cc_n.membership[linked_node])
                         track[4].append(coords_n[linked_node])
                         track[5].append(intensity_n[linked_node])
                         track[6].append(width_n[linked_node])
 
-            # delete terminated tracks from ongoing tracks
-            ongoing_tracks = [t for i, t in enumerate(ongoing_tracks) if i not in tracks_to_remove]
+            # delete terminated tracks from ongoing tracks (set membership)
+            remove_set = set(tracks_to_remove)
+            ongoing_tracks = [t for i, t in enumerate(ongoing_tracks) if i not in remove_set]
 
             for init_node in initiated:
                 ongoing_tracks.append([[frame + self.tracking_interval],
                                        [init_node],
-                                       [node_to_segment_n[init_node]],
+                                       [node_to_segment_n.get(init_node,np.nan)],
                                        [cc_n.membership[init_node]],
                                        [coords_n[init_node]],
                                        [intensity_n[init_node]],
                                        [width_n[init_node]]])
 
+            # accumulate post-LAP filtering + track-update time for this frame pair
+            self._timing['postfilter'] += time.time() - _postfilter_start
+
         linked_nodes = np.array(linked_nodes, dtype=object); terminated_nodes = np.array(terminated_nodes, dtype=object); initiated_nodes = np.array(initiated_nodes, dtype=object)
 
-        # each element in all_tracks is a track with 1) frame numbers; 2) node indices; 3) segment ids of the node, 4) frag ids of the node; 4) node coords; 5) node intensities; 6) node widths
-        terminated_tracks = np.array(terminated_tracks, dtype=object); ongoing_tracks = np.array(ongoing_tracks, dtype=object)
-        all_tracks = np.concatenate([terminated_tracks, ongoing_tracks])
+        # Each track is a list of 7 per-node fields: 1) frame numbers; 2) node
+        # indices; 3) segment ids; 4) fragment ids; 5) coordinates; 6) intensities;
+        # 7) widths. Build an explicit (num_tracks, 7) object array. Letting
+        # np.array(..., dtype=object) infer the shape mis-collapses to 2-D/3-D when
+        # tracks happen to have uniform-length sub-lists (e.g. a single frame pair),
+        # which breaks downstream; an explicit (N, 7) shape is robust in all cases
+        # and keeps each row indexable/`.tolist()`-able as the rest of run() expects.
+        all_tracks_list = list(terminated_tracks) + list(ongoing_tracks)
+        all_tracks = np.empty((len(all_tracks_list), 7), dtype=object)
+        for _idx, _track in enumerate(all_tracks_list):
+            all_tracks[_idx] = _track
 
         # filter out too short tracks
         short_tracks = []
@@ -566,6 +588,7 @@ class NetworkTracker:
 
         ### Gap closing ###
         print('\nInitiate gap closing ...')
+        _gap_start = time.time()
 
         # get track displacements
         all_track_disps = []
@@ -589,83 +612,18 @@ class NetworkTracker:
             print('Block ' + str(iter_num) + ' index:', partition_start, 'to', partition_end)
             print('Computing cost terms for block ' + str(iter_num))
 
-            track_cost_m_n = np.empty([partition_size, partition_size])
-            track_cost_m_n[:] = np.nan
+            # Compute the finite (within-cutoff) gap-closing costs (parallelized),
+            # then solve the block assignment on a sparse augmented matrix with
+            # lap.lapmod instead of a dense [P, 2P] scipy solve (see
+            # _solve_gap_lap_sparse). This avoids the dense P x P allocation and
+            # scales to large track counts.
+            entries = self._compute_gap_cost_entries(
+                all_tracks, all_track_disps, local_simple_graphs_all_frames,
+                partition_start, partition_end)
 
-            for i in range(partition_start, partition_end):
-
-                track_frames_m, track_nodes_m, track_coords_m = all_tracks[i][0], all_tracks[i][1], all_tracks[i][4]
-                end_frame_m, end_node_m, end_coord_m = track_frames_m[-1], track_nodes_m[-1], track_coords_m[-1]
-
-                simple_graphs_m = local_simple_graphs_all_frames[end_frame_m]
-                disps_m = all_track_disps[i]
-
-                for j in range(i+1, partition_end):  # no need to check index less than i because the start frame is sorted
-
-                    track_frames_n, track_nodes_n, track_coords_n = all_tracks[j][0], all_tracks[j][1], all_tracks[j][4]
-                    start_frame_n, start_node_n, start_coord_n = track_frames_n[0], track_nodes_n[0], track_coords_n[0]
-
-                    gap_size = start_frame_n - end_frame_m - 1
-
-                    # check only those within max gap size
-                    if 1 <= gap_size <= self.max_gap_size:  # if gap == 1 it should have been linked before - so skip it
-
-                        # load data
-                        simple_graphs_n = local_simple_graphs_all_frames[start_frame_n]
-
-                        # compute distance cutoff based on the two tracks
-                        disps_n = all_track_disps[j]
-                        comb_disps = disps_m + disps_n
-
-                        dist_cutoff = (gap_size + 1) * (3 * np.std(comb_disps)) ** 2
-
-                        # compute node-to-node distance
-                        dist = end_coord_m - start_coord_n
-                        dist_cost = np.sum(dist ** 2)
-
-                        # filter by distance cutoff
-                        if dist_cost > dist_cutoff:
-                            continue
-
-                        # compute topology cost
-                        topology_cost = _local_graph_comparison_score(self.graph_matching_depth, end_node_m, start_node_n,
-                                                                      simple_graphs_m, simple_graphs_n)
-
-                        # assign g.c. cost
-                        track_cost_m_n[i - partition_start, j - partition_start] = dist_cost ** self.dist_exponent * topology_cost ** self.top_exponent
-
-            # construct termination cost matrix
-            track_cost_m_m = np.empty([partition_size, partition_size])
-            track_cost_m_m[:] = np.nan
-
-            for i in range(partition_size):
-                row = track_cost_m_n[i, :]
-
-                if np.isnan(row).all():
-                    track_cost_m_m[i, i] = 0  # must be assigned to itself since all other nodes exceed max radius
-                else:
-                    min_cost = np.nanmin(row)
-                    track_cost_m_m[i, i] = 3 * min_cost
-
-            # assemble into one matrix
-            track_cost_matrix = np.concatenate((track_cost_m_n, track_cost_m_m), axis=1)
-            track_cost_matrix[np.isnan(track_cost_matrix)] = np.inf
-
-            # evaluate memory usage
-            # print('Cost matrix memory usage: {:.1f} MB\n'.format(track_cost_matrix.nbytes / 1024 ** 2))
-
-            # solve LAP and store linking results
-            assignment = lap_solver(track_cost_matrix)[1]
-
-            linked = []
-            for i in range(len(assignment)):
-                if assignment[i] < partition_size:
-                    linked.append(
-                        [i, assignment[i]])  # first being index for frame t and second for frame t+tracking_interval
-
-            for pair in linked:
-                all_track_assignments[partition_start + pair[0]] = partition_start + pair[
-                    1]  # offset by start index of the partition
+            for li, lj in _solve_gap_lap_sparse(entries, partition_start, partition_end):
+                # offset local block indices back to global track indices
+                all_track_assignments[partition_start + li] = partition_start + lj
 
             # go to next partition
             if self.block_size_factor == 1:
@@ -683,27 +641,30 @@ class NetworkTracker:
         # combine tracks for gap closing
         print('Start combining closed tracks ...')
         if linked_tracks.shape[0] > 0:
-            linked_tracks_for_update = linked_tracks.copy()  # used to record appended tracks
-            tracks_of_track = []  # list of linked tracks
+            tracks_of_track = []  # list of linked-track chains
             all_linked_tracks = []  # record tracks that are closed
 
-            # recursive function for finding linked tracks
-            def find_all_linked_tracks(tracks, track_id):
-                for i in range(0, len(linked_tracks_for_update)):
-                    if linked_tracks_for_update[i, 0] == track_id:  # find the first track
-                        tracks.append(linked_tracks_for_update[i, 1])
-                        linked_tracks_for_update[i, 0] = -1  # note that the track is already appended
-                        find_all_linked_tracks(tracks, linked_tracks_for_update[
-                            i, 1])  # go to the next track and find linked_tracks track
-
-            # for each track find the series of linked tracks
+            # Each source track maps to exactly one target; follow source->target
+            # links to build chains. An adjacency dict + a "consumed sources" set
+            # replaces the recursive O(num_tracks^2) scan while reproducing it
+            # exactly: a source row is consumed only once it is followed, so a
+            # track can still be appended as the *target* of a later chain even
+            # if it already headed its own chain.
+            src_to_tgt = {int(s): int(t) for s, t in linked_tracks}
+            consumed = set()  # sources whose link has been followed
             for index in range(len(linked_tracks)):
-                track_id = linked_tracks[index, 0]
-                if track_id in linked_tracks_for_update[:, 0]:
-                    tracks = [track_id]
-                    find_all_linked_tracks(tracks, track_id)
-                    tracks_of_track.append(tracks)
-                    all_linked_tracks += tracks
+                track_id = int(linked_tracks[index, 0])
+                if track_id in consumed:
+                    continue
+                chain = [track_id]
+                current = track_id
+                while current in src_to_tgt and current not in consumed:
+                    target = src_to_tgt[current]
+                    chain.append(target)
+                    consumed.add(current)
+                    current = target
+                tracks_of_track.append(chain)
+                all_linked_tracks += chain
 
             # concatenate data for closed tracks
             all_closed_tracks = []
@@ -716,9 +677,10 @@ class NetworkTracker:
                                           sum([all_tracks[t][5] for t in tot], []),
                                           sum([all_tracks[t][6] for t in tot], [])])
 
-            # add unclosed tracks back
+            # add unclosed tracks back  (set membership: was O(num_tracks^2))
+            all_linked_set = set(all_linked_tracks)
             for t in range(num_tracks):
-                if t not in all_linked_tracks:
+                if t not in all_linked_set:
                     all_closed_tracks.append(all_tracks[t].tolist())
 
             # sort tracks
@@ -730,10 +692,13 @@ class NetworkTracker:
         else:
             all_closed_tracks = all_tracks
 
+        self._timing['gap_closing'] += time.time() - _gap_start
+
         print(f"Number of tracks and average track length before gap closing: {len(all_tracks)}, {np.mean([len(track[0]) for track in all_tracks]):.2f}")
         print(f"Number of tracks and average track length after gap closing: {len(all_closed_tracks)}, {np.mean([len(track[0]) for track in all_closed_tracks]):.2f}")
 
         print('\nSaving final node trajectory file. This might take a few minutes for large files.')
+        _save_start = time.time()
 
         records = []
         append = records.append 
@@ -786,11 +751,369 @@ class NetworkTracker:
         # save data
         final_tracks.to_csv(self.segmented_mito.save_path + 'mito_node_tracks.csv', index=False)
         np.save(self.segmented_mito.save_path + 'mito_linked_nodes', linked_nodes)
+        self._timing['save'] += time.time() - _save_start
         print('Tracking is complete and files are saved!')
+
+        # per-stage timing summary (helps locate remaining bottlenecks)
+        print('\n=== Tracking stage timing (s) ===')
+        for _stage, _dt in self._timing.items():
+            print(f"  {_stage:<12}: {_dt:8.2f}")
+        print(f"  {'TOTAL':<12}: {sum(self._timing.values()):8.2f}")
 
         return TrackedMito(self.segmented_mito, self.frame_interval, self.start_frame, self.end_frame, self.tracking_interval,
                            final_tracks, linked_nodes)
 
+
+    def _compute_topology_costs(self, cand_i, cand_j, simple_graphs_m, simple_graphs_n):
+        """
+        Compute the local-graph topology comparison score for each candidate
+        (m-node, n-node) pair. Every pair is independent, so for large workloads
+        this fans out across up to `self.num_workers` processes.
+
+        Parallelism uses the 'fork' start method so each worker inherits the two
+        local-graph lists via copy-on-write — only the lightweight index chunks are sent to workers,
+        never the graphs themselves. The score function copies each fragment
+        before mutating it, so the shared graphs are read-only and fork-safe.
+        """
+        depth = self.graph_matching_depth
+        n_pairs = len(cand_i)
+        if n_pairs == 0:
+            return np.empty(0, dtype=float)
+
+        # Serial path for small workloads (avoids process-pool setup overhead).
+        if self.num_workers <= 1 or n_pairs < 5000:
+            out = np.empty(n_pairs, dtype=float)
+            for k in range(n_pairs):
+                out[k] = _local_graph_comparison_score(
+                    depth, int(cand_i[k]), int(cand_j[k]), simple_graphs_m, simple_graphs_n)
+            return out
+
+        # Parallel path: publish graphs as globals BEFORE forking so workers
+        # inherit them; pass only index chunks through the pool.
+        global _WORKER_TOPO
+        _WORKER_TOPO = {'m': simple_graphs_m, 'n': simple_graphs_n, 'depth': depth}
+        try:
+            n_chunks = min(n_pairs, self.num_workers * 4)
+            split = np.array_split(np.arange(n_pairs), n_chunks)
+            chunk_args = [(cand_i[c], cand_j[c]) for c in split]
+            ctx = mp.get_context('fork')
+            with ctx.Pool(self.num_workers) as pool:
+                results = pool.map(_topo_worker, chunk_args)
+        finally:
+            _WORKER_TOPO = {}  # release references in the parent
+
+        out = np.empty(n_pairs, dtype=float)
+        for c, r in zip(split, results):
+            out[c] = r
+        return out
+
+
+    def _compute_gap_cost_entries(self, all_tracks, all_track_disps,
+                                  local_simple_graphs_all_frames,
+                                  partition_start, partition_end):
+        """
+        Compute the gap-closing cost for candidate track pairs (i, j) with i in
+        [partition_start, partition_end). Candidate targets are found with a
+        per-start-frame KD-tree on track start coordinates instead of an
+        O(num_tracks^2) all-pairs scan: only tracks whose start lies within a
+        safe radius of source i's end point can satisfy the distance cutoff. The
+        exact gap-size / distance / topology checks are still applied to every
+        returned pair, so the result is identical to the brute-force version.
+        Independent per source track, so it fans out across up to
+        `self.num_workers` processes (mirrors `_compute_topology_costs`).
+        Returns a flat list of (i, j, cost).
+        """
+        idxs = list(range(partition_start, partition_end))
+        n = len(idxs)
+        if n == 0:
+            return []
+
+        # Per-track endpoints (keyed by global track index), grouped by start frame.
+        end_frame, end_coord, end_node = {}, {}, {}
+        start_node, start_coord = {}, {}
+        by_start_frame = {}
+        max_disp = 0.0
+        for idx in idxs:
+            frames, nodes, coords = all_tracks[idx][0], all_tracks[idx][1], all_tracks[idx][4]
+            end_frame[idx] = frames[-1]
+            end_node[idx] = nodes[-1]
+            end_coord[idx] = np.asarray(coords[-1], dtype=float)
+            start_node[idx] = nodes[0]
+            start_coord[idx] = np.asarray(coords[0], dtype=float)
+            by_start_frame.setdefault(frames[0], []).append(idx)
+            disps = all_track_disps[idx]
+            if disps:
+                dm = max(disps)
+                if dm > max_disp:
+                    max_disp = dm
+
+        # One KD-tree of start coordinates per start frame; tree point k maps
+        # back to global track index tree_idx[sf][k].
+        trees, tree_idx = {}, {}
+        for sf, members in by_start_frame.items():
+            tree_idx[sf] = members
+            trees[sf] = cKDTree(np.array([start_coord[i] for i in members], dtype=float))
+
+        # Safe search radius: a pair's distance cutoff is
+        # (gap+1)*(3*std(comb_disps))^2, and the std of non-negative displacements
+        # is bounded by their maximum value, so the cutoff is <=
+        # (max_gap+1)*(3*max_disp)^2 = radius^2. Querying within `radius` therefore
+        # keeps every true candidate; the exact cutoff is re-checked per pair.
+        radius = 3.0 * max_disp * np.sqrt(self.max_gap_size + 1)
+
+        global _WORKER_GAP
+        _WORKER_GAP = {'disps': all_track_disps, 'lsg': local_simple_graphs_all_frames,
+                       'max_gap': self.max_gap_size, 'depth': self.graph_matching_depth,
+                       'dist_exp': self.dist_exponent, 'top_exp': self.top_exponent,
+                       'end_frame': end_frame, 'end_coord': end_coord, 'end_node': end_node,
+                       'start_node': start_node, 'start_coord': start_coord,
+                       'trees': trees, 'tree_idx': tree_idx, 'radius': radius,
+                       'tracking_interval': self.tracking_interval}
+        try:
+            # Serial path for small blocks (avoids process-pool setup overhead).
+            if self.num_workers <= 1 or n < 2000:
+                return _gap_cost_worker(idxs)
+
+            n_chunks = min(n, self.num_workers * 4)
+            chunks = [idxs[k::n_chunks] for k in range(n_chunks)]
+            chunks = [c for c in chunks if c]
+            ctx = mp.get_context('fork')
+            with ctx.Pool(self.num_workers) as pool:
+                results = pool.map(_gap_cost_worker, chunks)
+        finally:
+            _WORKER_GAP = {}  # release references in the parent
+
+        out = []
+        for r in results:
+            out.extend(r)
+        return out
+
+
+# Populated in the parent process before a fork-based pool is created; worker
+# processes read the two local-graph lists from here via copy-on-write.
+_WORKER_TOPO = {}
+
+
+def _topo_worker(chunk):
+    """Compute topology scores for one chunk of candidate pairs (forked worker)."""
+    ci, cj = chunk
+    gm, gn, depth = _WORKER_TOPO['m'], _WORKER_TOPO['n'], _WORKER_TOPO['depth']
+    out = np.empty(len(ci), dtype=float)
+    for t in range(len(ci)):
+        out[t] = _local_graph_comparison_score(depth, int(ci[t]), int(cj[t]), gm, gn)
+    return out
+
+
+# Populated before a fork-based gap-closing pool is created; workers read the
+# track data + local-graph lists from here via copy-on-write.
+_WORKER_GAP = {}
+
+
+def _gap_cost_worker(i_chunk):
+    """Compute gap-closing costs for a chunk of source-track indices (forked
+    worker), using the per-start-frame KD-trees to find candidate targets within
+    the safe radius. Returns a list of (i, j, cost) for pairs passing the cutoffs."""
+    G = _WORKER_GAP
+    all_track_disps, lsg = G['disps'], G['lsg']
+    max_gap, depth = G['max_gap'], G['depth']
+    dist_exp, top_exp = G['dist_exp'], G['top_exp']
+    end_frame, end_coord, end_node = G['end_frame'], G['end_coord'], G['end_node']
+    start_node, start_coord = G['start_node'], G['start_coord']
+    trees, tree_idx, radius = G['trees'], G['tree_idx'], G['radius']
+    tracking_interval = G['tracking_interval']
+
+    out = []
+    for i in i_chunk:
+        end_frame_m = end_frame[i]
+        end_coord_m = end_coord[i]
+        end_node_m = end_node[i]
+        disps_m = all_track_disps[i]
+        simple_graphs_m = lsg[end_frame_m]
+
+        # Tracked frames are spaced by tracking_interval, so a target separated
+        # by gap_size missing tracked-frames starts at
+        # end_frame_m + (gap_size + 1) * tracking_interval. (gap_size == 0 would
+        # already have been linked frame-to-frame, so gap_size >= 1.)
+        for gap_size in range(1, max_gap + 1):
+            start_frame_n = end_frame_m + (gap_size + 1) * tracking_interval
+            tree = trees.get(start_frame_n)
+            if tree is None:
+                continue
+            members = tree_idx[start_frame_n]
+            for k in tree.query_ball_point(end_coord_m, radius):
+                j = members[k]
+
+                disps_n = all_track_disps[j]
+                comb_disps = disps_m + disps_n
+                dist_cutoff = (gap_size + 1) * (3 * np.std(comb_disps)) ** 2
+
+                dist = end_coord_m - start_coord[j]
+                dist_cost = np.sum(dist ** 2)
+                if dist_cost > dist_cutoff:
+                    continue
+
+                topology_cost = _local_graph_comparison_score(depth, end_node_m, start_node[j],
+                                                              simple_graphs_m, lsg[start_frame_n])
+                out.append((i, j, dist_cost ** dist_exp * topology_cost ** top_exp))
+    return out
+
+
+def _solve_lap_sparse(cand_i, cand_j, link_cost, m, n):
+    """
+    Solve the births/deaths linear assignment problem on a SPARSE augmented
+    bipartite graph, returning an `assignment` array of length (m + n) with the
+    same semantics as the dense formulation it replaces:
+
+        assignment[i]   for i in [0, m): linked n-node index if < n, else terminated
+        assignment[m+j] for j in [0, n): < n  => n-node j initiated
+
+    Layout of the (m+n) x (n+m) augmented matrix (identical to the dense code):
+        rows [0, m)      = m-nodes        cols [0, n)      = n-nodes
+        rows [m, m+n)    = birth_j         cols [n, n+m)    = death_i
+
+    Edges:
+        m_i  -> n_j        link cost            (candidate pattern)
+        m_i  -> death_i    3 * min link in row  (always present)
+        birth_j -> n_j     3 * min link in col  (always present)
+        birth_j -> death_i constant C           (candidate pattern; feasibility filler)
+
+    The death/birth diagonals alone guarantee a perfect matching exists. The
+    constant-C auxiliary block on the candidate pattern makes this equivalent to
+    the dense constant-`nanmin` block: #aux edges used == #links and each costs C,
+    and for every link (i, j) the edge (birth_j -> death_i) exists, so any dense-
+    feasible link set is feasible here at identical cost.
+    """
+    ncand = len(cand_i)
+
+    # Degenerate empty problem (no nodes in either frame): nothing to assign.
+    # lap.lapmod raises on a 0-dim matrix, so return an empty assignment.
+    if m + n == 0:
+        return np.empty(0, dtype=np.int64)
+
+    row_min = np.full(m, np.inf)
+    col_min = np.full(n, np.inf)
+    if ncand > 0:
+        np.minimum.at(row_min, cand_i, link_cost)
+        np.minimum.at(col_min, cand_j, link_cost)
+        C = float(link_cost.min())
+    else:
+        C = 0.0
+
+    death = np.where(np.isfinite(row_min), 3.0 * row_min, 0.0)
+    birth = np.where(np.isfinite(col_min), 3.0 * col_min, 0.0)
+
+    rows, cols, vals = [], [], []
+    if ncand > 0:
+        # link edges
+        rows.append(cand_i);            cols.append(cand_j);            vals.append(link_cost)
+        # auxiliary edges (constant C on candidate pattern, transposed)
+        rows.append(m + cand_j);        cols.append(n + cand_i);        vals.append(np.full(ncand, C))
+    # death diagonal
+    rows.append(np.arange(m));          cols.append(n + np.arange(m));  vals.append(death)
+    # birth diagonal
+    rows.append(m + np.arange(n));      cols.append(np.arange(n));      vals.append(birth)
+
+    rows = np.concatenate(rows).astype(np.int64)
+    cols = np.concatenate(cols).astype(np.int64)
+    # Add a tiny constant so no stored weight is exactly zero (scipy sparse treats
+    # explicit zeros as absent edges). A uniform shift adds (m+n)*eps to every
+    # perfect matching, so it never changes which assignment is optimal.
+    vals = np.concatenate(vals).astype(float) + 1e-12
+
+    dim = m + n
+    cost = coo_matrix((vals, (rows, cols)), shape=(dim, dim)).tocsr()
+
+    # Solve with lap.lapmod (sparse Jonker-Volgenant), which scales to large
+    # sparse assignment problems where a dense solver does not. The death/birth
+    # diagonals guarantee a complete (perfect-matching-feasible) sparse cost
+    # matrix, which lapmod requires. lapmod returns x[i] = column assigned to
+    # row i, which is exactly the `assignment` array semantics expected here.
+    _, x, _ = lap.lapmod(dim,
+                         cost.data.astype(np.float64),
+                         cost.indptr.astype(np.int32),
+                         cost.indices.astype(np.int32))
+    return x.astype(np.int64)
+
+
+def _solve_gap_lap_sparse(entries, partition_start, partition_end):
+    """
+    Sparse equivalent of the dense gap-closing assignment. The original built a
+    dense [P, 2P] matrix (link block | per-track termination diagonal) and solved
+    it with scipy.linear_sum_assignment; this reproduces the same optimum on a
+    sparse augmented [2P, 2P] matrix solved by lap.lapmod, avoiding the dense
+    O(P^2) allocation (P = number of tracks in the block).
+
+    `entries` is the list of finite (i, j, cost) link costs with GLOBAL track
+    indices; partition_start/partition_end define the block. Returns the linked
+    pairs as LOCAL (source, target) block indices.
+
+    Augmented layout (rows x cols, both 2P):
+        rows [0,P)   sources    cols [0,P)   targets
+        rows [P,2P)  births     cols [P,2P)  deaths
+    Edges:
+        source_i -> target_j   link cost             (candidate pattern)
+        source_i -> death_i    3 * min link in row   (termination; always present)
+        birth_j  -> target_j   0                     (free, unlinked target)
+        birth_j  -> death_i    0                     (candidate pattern; filler)
+    The death/birth diagonals guarantee a feasible perfect matching. With zero
+    birth and auxiliary costs the augmented optimum equals the original
+    rectangular optimum: every perfect matching uses exactly (#links) auxiliary
+    edges, each costing 0, so the two objective values are identical.
+    """
+    P = partition_end - partition_start
+    if P == 0:
+        return []
+
+    li = np.array([e[0] - partition_start for e in entries], dtype=np.int64)
+    lj = np.array([e[1] - partition_start for e in entries], dtype=np.int64)
+    lc = np.array([e[2] for e in entries], dtype=float)
+    ncand = len(li)
+
+    # termination cost per source = 3 * min link cost in its row (0 if no links)
+    row_min = np.full(P, np.inf)
+    if ncand:
+        np.minimum.at(row_min, li, lc)
+    death = np.where(np.isfinite(row_min), 3.0 * row_min, 0.0)
+
+    rows, cols, vals = [], [], []
+    if ncand:
+        rows.append(li);               cols.append(lj);               vals.append(lc)
+        rows.append(P + lj);           cols.append(P + li);           vals.append(np.zeros(ncand))
+    rows.append(np.arange(P));         cols.append(P + np.arange(P)); vals.append(death)
+    rows.append(P + np.arange(P));     cols.append(np.arange(P));     vals.append(np.zeros(P))
+
+    rows = np.concatenate(rows).astype(np.int64)
+    cols = np.concatenate(cols).astype(np.int64)
+    # Uniform tiny shift so stored zeros survive COO->CSR (which drops explicit
+    # zeros); a constant added to every weight leaves the optimal matching fixed.
+    vals = np.concatenate(vals).astype(float) + 1e-12
+
+    dim = 2 * P
+    cost = coo_matrix((vals, (rows, cols)), shape=(dim, dim)).tocsr()
+    _, x, _ = lap.lapmod(dim,
+                         cost.data.astype(np.float64),
+                         cost.indptr.astype(np.int32),
+                         cost.indices.astype(np.int32))
+    return [(i, int(x[i])) for i in range(P) if x[i] < P]
+
+
+class _SparseDist:
+    """
+    Sparse stand-in for the dense (m x n) distance matrix. Stores the
+    pseudo-counted distance for each candidate pair and returns NaN for
+    non-candidate pairs, supporting the scalar `dist_cost_mat[i, j]` access used
+    downstream during segment-based filtering and arrow correction.
+    """
+    __slots__ = ("_d", "shape")
+
+    def __init__(self, cand_i, cand_j, values, m, n):
+        self._d = {(int(i), int(j)): float(v)
+                   for i, j, v in zip(cand_i.tolist(), cand_j.tolist(), values.tolist())}
+        self.shape = (m, n)
+
+    def __getitem__(self, key):
+        i, j = key
+        return self._d.get((int(i), int(j)), np.nan)
 
 
 def _list_to_str(list1):
@@ -815,13 +1138,23 @@ def _dissimilarity_score(sel_edge_len_m, sel_edge_len_n):
         sel_edge_len_n += [0] * abs(num_edge_diff)
 
     num_edges = max(len(sel_edge_len_m), len(sel_edge_len_n))
+    
+    # Early exit for two lone nodes with zero edges to avoid LAP solver on empty matrix
+    if num_edges == 0:
+        return 0.0
+        
     cost_mat = np.zeros((num_edges, num_edges))
 
     # fill cost matrix
     for i in range(num_edges):
         for j in range(num_edges):
-            cost_mat[i, j] = abs(sel_edge_len_m[i] - sel_edge_len_n[j]) / max(sel_edge_len_m[i], sel_edge_len_n[
-                j])  # should never have two zeros
+            # FIX: Handle the case where both edge lengths are exactly 0
+            max_len = max(sel_edge_len_m[i], sel_edge_len_n[j])
+            
+            if max_len == 0:
+                cost_mat[i, j] = 0.0
+            else:
+                cost_mat[i, j] = abs(sel_edge_len_m[i] - sel_edge_len_n[j]) / max_len 
 
     # solve LAP to find minimum score
     assigned = lap_solver(cost_mat)[1]
@@ -865,19 +1198,25 @@ def _local_graph_comparison_score(depth, node_i, node_j, contracted_graphs_m, co
             # replace each cycle edge with two pseudo-edges of same lengths and add two pseudo-nodes
             for neigh in neighbors_m:
                 if neigh in visited_nodes_m and neigh not in last_level_m:
-                    dist = frag_m.es[frag_m.get_eid(node_m, neigh)]['distance']
-                    frag_m.delete_edges(frag_m.get_eid(node_m, neigh))
-                    frag_m.add_vertices(2)
-                    frag_m.add_edges([[node_m, frag_m.vs[-2].index]], {'distance': dist})
-                    frag_m.add_edges([[neigh, frag_m.vs[-1].index]], {'distance': dist})
+                    # check if the edge still exists
+                    eid = frag_m.get_eid(node_m, neigh, error=False)
+                    if eid != -1:
+                        dist = frag_m.es[eid]['distance']
+                        frag_m.delete_edges(eid)
+                        frag_m.add_vertices(2)
+                        frag_m.add_edges([[node_m, frag_m.vs[-2].index]], {'distance': dist})
+                        frag_m.add_edges([[neigh, frag_m.vs[-1].index]], {'distance': dist})
 
             for neigh in neighbors_n:
                 if neigh in visited_nodes_n and neigh not in last_level_n:
-                    dist = frag_n.es[frag_n.get_eid(node_n, neigh)]['distance']
-                    frag_n.delete_edges(frag_n.get_eid(node_n, neigh))
-                    frag_n.add_vertices(2)
-                    frag_n.add_edges([[node_n, frag_n.vs[-2].index]], {'distance': dist})
-                    frag_n.add_edges([[neigh, frag_n.vs[-1].index]], {'distance': dist})
+                    # check if the edge still exists
+                    eid = frag_n.get_eid(node_n, neigh, error=False)
+                    if eid != -1:
+                        dist = frag_n.es[eid]['distance']
+                        frag_n.delete_edges(eid)
+                        frag_n.add_vertices(2)
+                        frag_n.add_edges([[node_n, frag_n.vs[-2].index]], {'distance': dist})
+                        frag_n.add_edges([[neigh, frag_n.vs[-1].index]], {'distance': dist})
 
             # add pseudo-nodes and pseudo-edges of 0 at this level
             num_node_diff = len(neighbors_m) - len(neighbors_n)
@@ -890,36 +1229,46 @@ def _local_graph_comparison_score(depth, node_i, node_j, contracted_graphs_m, co
                     frag_m.add_vertices(1)
                     frag_m.add_edges([[node_m, frag_m.vs[-1].index]], {'distance': 0})
 
-            # update neighbor list to include pseudo-nodes
+            # Update neighbor list to include pseudo-nodes
             neighbors_m = frag_m.neighbors(node_m)
             neighbors_n = frag_n.neighbors(node_n)
-            # remember to exclude parents
-            for neigh in neighbors_m:
-                if neigh in last_level_m:
-                    neighbors_m.remove(neigh)
-            for neigh in neighbors_n:
-                if neigh in last_level_n:
-                    neighbors_n.remove(neigh)
 
-            # map index of cost matrix to real node ids
-            index_mapping_m = {i: neighbors_m[i] for i in range(len(neighbors_m))}
-            index_mapping_n = {i: neighbors_n[i] for i in range(len(neighbors_n))}
+            # Use list comprehensions to exclude parents. 
+            # Never use .remove() inside a loop as it skips elements.
+            neighbors_m = [n for n in neighbors_m if n not in last_level_m]
+            neighbors_n = [n for n in neighbors_n if n not in last_level_n]
+
+            # Re-map indices to the filtered neighbors
+            index_mapping_m = {idx: val for idx, val in enumerate(neighbors_m)}
+            index_mapping_n = {idx: val for idx, val in enumerate(neighbors_n)}
 
             num_node = max(len(neighbors_m), len(neighbors_n))
             cost_mat = np.zeros((num_node, num_node))
 
-            # fill cost matrix with dissimilarity scores of each node m and n
+            # fill cost matrix with dissimilarity scores
             for i in range(num_node):
                 for j in range(num_node):
-                    sel_edge_len_m = frag_m.es[frag_m.incident(index_mapping_m[i])]['distance']
-                    sel_edge_len_n = frag_n.es[frag_n.incident(index_mapping_n[j])]['distance']
-                    cost_mat[i, j] = _dissimilarity_score(sel_edge_len_m, sel_edge_len_n)
+                    # Add bounds checking for mismatched neighbor counts.
+                    # If an index is missing, treat it as a pseudo-edge with 0 distance.
+                    if i in index_mapping_m:
+                        sel_edge_len_m = frag_m.es[frag_m.incident(index_mapping_m[i])]['distance']
+                    else:
+                        sel_edge_len_m = [0.0]
 
+                    if j in index_mapping_n:
+                        sel_edge_len_n = frag_n.es[frag_n.incident(index_mapping_n[j])]['distance']
+                    else:
+                        sel_edge_len_n = [0.0]
+
+                    cost_mat[i, j] = _dissimilarity_score(sel_edge_len_m, sel_edge_len_n) 
+
+            # run LAP solver
             nc = lap_solver(cost_mat)[1]
 
             # get node correspondence between local graphs m and n
             for a in range(len(nc)):
-                node_mapping[index_mapping_m[a]] = index_mapping_n[nc[a]]
+                if a in index_mapping_m and nc[a] in index_mapping_n:
+                    node_mapping[index_mapping_m[a]] = index_mapping_n[nc[a]]
 
     # CALCULATE ADJACENCY MATRIX
     # n-to-m mapping
