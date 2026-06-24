@@ -1,0 +1,2994 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>API Reference - MitoTNT</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../assets/_mkdocstrings.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "API Reference";
+        var mkdocs_page_input_path = "api_reference.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="..">
+          <img src="../contents/logo.png" class="logo" alt="Logo"/>
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../installation/">Installation</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../quick_start/">Quick Start</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../user_guide/">User Guide</a>
+                </li>
+              </ul>
+              <ul class="current">
+                <li class="toctree-l1 current"><a class="reference internal current" href="#">API Reference</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#mitotnt.mito_segmenter.MitoSegmenter">MitoSegmenter</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#mitotnt.mito_segmenter.MitoSegmenter.run_mitograph_cpu">run_mitograph_cpu</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#mitotnt.mito_segmenter.MitoSegmenter.visualize_segmented_data">visualize_segmented_data</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#mitotnt.skeletonized_mito.SkeletonizedMito">SkeletonizedMito</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#mitotnt.skeletonized_mito.SkeletonizedMito.extract_graphs">extract_graphs</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#mitotnt.network_tracker.NetworkTracker">NetworkTracker</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#mitotnt.network_tracker.NetworkTracker.reload_results">reload_results</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#mitotnt.network_tracker.NetworkTracker.run">run</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#mitotnt.tracked_mito.TrackedMito">TrackedMito</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#mitotnt.tracked_mito.TrackedMito.compute_fragment_diffusivity">compute_fragment_diffusivity</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#mitotnt.tracked_mito.TrackedMito.compute_mitochondria_diffusivity">compute_mitochondria_diffusivity</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#mitotnt.tracked_mito.TrackedMito.compute_node_diffusivity">compute_node_diffusivity</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#mitotnt.tracked_mito.TrackedMito.compute_segment_diffusivity">compute_segment_diffusivity</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#mitotnt.tracked_mito.TrackedMito.detect_fusion_fission">detect_fusion_fission</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#mitotnt.visualizer.Visualizer">Visualizer</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#mitotnt.visualizer.Visualizer.generate_chimerax_skeleton">generate_chimerax_skeleton</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#mitotnt.visualizer.Visualizer.generate_tracking_arrows">generate_tracking_arrows</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#mitotnt.visualizer.Visualizer.map_mitochondria_fragment_motility">map_mitochondria_fragment_motility</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#mitotnt.visualizer.Visualizer.map_mitochondria_motility">map_mitochondria_motility</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#mitotnt.visualizer.Visualizer.map_mitochondria_node_motility">map_mitochondria_node_motility</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#mitotnt.visualizer.Visualizer.map_mitochondria_segment_motility">map_mitochondria_segment_motility</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#mitotnt.visualizer.Visualizer.visualize_tracking">visualize_tracking</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#mitotnt.feature_extractor.FeatureExtractor">FeatureExtractor</a>
+    </li>
+    </ul>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">MitoTNT</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">API Reference</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="api-reference">API Reference</h1>
+<p>This section documents the main classes and functions in the <code>mitotnt</code> package.</p>
+<hr />
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="mitotnt.mito_segmenter.MitoSegmenter" class="doc doc-heading">
+              <code class="highlight language-python">MitoSegmenter</code>
+
+</h2>
+
+
+    <div class="doc doc-contents first">
+
+
+
+        <p>Scans a directory for subfolders matching a given pattern
+(e.g., <code>"frame_000"</code>, <code>"frame_001"</code>), stores metadata about
+the dataset, and records pixel resolution information.</p>
+
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Parameters:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+              <b><code>data_path</code></b>
+                  (<code><span title="str">str</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>Path to the root directory containing frame subfolders of raw tif.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>pattern</code></b>
+                  (<code><span title="str">str</span></code>, default:
+                      <code>&#39;frame&#39;</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>Substring pattern used to identify frame folders
+(default is "frame").</p>
+              </div>
+            </li>
+            <li>
+              <b><code>xy_pxl_size</code></b>
+                  (<code><span title="float">float</span></code>, default:
+                      <code>1.0</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>Pixel size in the x–y plane, in microns (default is 1.0).</p>
+              </div>
+            </li>
+            <li>
+              <b><code>z_pxl_size</code></b>
+                  (<code><span title="float">float</span></code>, default:
+                      <code>1.0</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>Pixel size in the z axis, in microns (default is 1.0).</p>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Attributes:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+              <b><code>data_path</code></b>
+                  (<code><span title="str">str</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>Path to the root data directory.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>list_of_folders</code></b>
+                  (<code>list of str</code>)
+              –
+              <div class="doc-md-description">
+                <p>Sorted list of frame-level subfolders matching the given pattern.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>num_frames</code></b>
+                  (<code><span title="int">int</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>Number of frames detected in the dataset.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>xy_pxl_size</code></b>
+                  (<code><span title="float">float</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>Pixel resolution in the x–y plane.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>z_pxl_size</code></b>
+                  (<code><span title="float">float</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>Pixel resolution in the z axis.</p>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="mitotnt.mito_segmenter.MitoSegmenter.run_mitograph_cpu" class="doc doc-heading">
+            <code class="highlight language-python">run_mitograph_cpu</code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Run MitoGraph on each frame of the dataset using CPU in parallel with a progress bar.</p>
+
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Parameters:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+              <b><code>overwrite</code></b>
+                  (<code><span title="bool">bool</span></code>, default:
+                      <code>False</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>Whether to overwrite existing MitoGraph outputs (default is False).</p>
+              </div>
+            </li>
+            <li>
+              <b><code>extra_params</code></b>
+                  (<code><span title="str">str</span></code>, default:
+                      <code>&#39;&#39;</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>Additional MitoGraph parameters (default is "").</p>
+              </div>
+            </li>
+            <li>
+              <b><code>max_workers</code></b>
+                  (<code><span title="int">int</span></code>, default:
+                      <code>4</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>Number of threads to use in parallel (default is 4).</p>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Returns:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+                  <code>None</code>
+              –
+              <div class="doc-md-description">
+                <p>The MitoGraph outputs are written to each frame subfolder containing <code>.tif</code>.</p>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="mitotnt.mito_segmenter.MitoSegmenter.visualize_segmented_data" class="doc doc-heading">
+            <code class="highlight language-python">visualize_segmented_data</code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Create ChimeraX script to visualize the segmented mitochondrial surface and the raw microscopy data.
+This is critical to evaluate the quality of mitochondria segmentation.</p>
+
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Parameters:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+              <b><code>frames</code></b>
+                  (<code>list of int</code>, default:
+                      <code>None</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>The frames to visualize (default is [0, -1], the first and last frames).</p>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Returns:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+                  <code>None</code>
+              –
+              <div class="doc-md-description">
+                <p>check_mitograph.cxc is saved and can be opened in ChimeraX for visualization.</p>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+
+</div><hr />
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="mitotnt.skeletonized_mito.SkeletonizedMito" class="doc doc-heading">
+              <code class="highlight language-python">SkeletonizedMito</code>
+
+</h2>
+
+
+    <div class="doc doc-contents first">
+
+
+
+        <p>This class stores metadata and skeletonized graph representations
+of mitochondria extracted from raw segmentation results produced by
+<code>MitoSegmenter</code>. It provides access to frame-level information and
+graph structures that can later be used for tracking.</p>
+
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Parameters:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+              <b><code>mito_segmenter</code></b>
+                  (<code><a class="autorefs autorefs-internal" title="MitoSegmenter (mitotnt.mito_segmenter.MitoSegmenter)" href="#mitotnt.mito_segmenter.MitoSegmenter">MitoSegmenter</a></code>)
+              –
+              <div class="doc-md-description">
+                <p>Object that contains metadata.</p>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Attributes:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+              <b><code>data_path</code></b>
+                  (<code><span title="str">str</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>Path to the directory containing the segmented mitochondrial data.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>list_of_folders</code></b>
+                  (<code>list of str</code>)
+              –
+              <div class="doc-md-description">
+                <p>List of frame-level folders containing segmentation outputs.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>num_frames</code></b>
+                  (<code><span title="int">int</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>Total number of frames in the dataset.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>xy_pxl_size</code></b>
+                  (<code><span title="float">float</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>Pixel size in the x–y plane (microns).</p>
+              </div>
+            </li>
+            <li>
+              <b><code>z_pxl_size</code></b>
+                  (<code><span title="float">float</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>Pixel size in the z axis (microns).</p>
+              </div>
+            </li>
+            <li>
+              <b><code>save_path</code></b>
+                  (<code><span title="str">str</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>Path to where processed mitochondrial data will be saved.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>full_graphs</code></b>
+                  (<code><span title="list">list</span> or None</code>)
+              –
+              <div class="doc-md-description">
+                <p>Frame-wise full graphs with all nodes. None until computed.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>segment_nodes</code></b>
+                  (<code><span title="list">list</span> or None</code>)
+              –
+              <div class="doc-md-description">
+                <p>Nodes for each mitochondrial segment (branch). None until computed.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>simple_graphs</code></b>
+                  (<code><span title="list">list</span> or None</code>)
+              –
+              <div class="doc-md-description">
+                <p>Frame-wise simple graphs (full_graphs where degree-2 nodes are substituted by edges). None until computed.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>local_simple_graphs</code></b>
+                  (<code><span title="list">list</span> or None</code>)
+              –
+              <div class="doc-md-description">
+                <p>Simple graphs restricted to the local neighborhood of each node. They are used for computing topology cost when tracking. None until computed.</p>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="mitotnt.skeletonized_mito.SkeletonizedMito.extract_graphs" class="doc doc-heading">
+            <code class="highlight language-python">extract_graphs</code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Extract the graph representations of the previously segmented mitochondria used for tracking.</p>
+
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Parameters:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+              <b><code>overwrite</code></b>
+                  (<code><span title="bool">bool</span></code>, default:
+                      <code>False</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>Whether to overwrite existing graphs (default is False).</p>
+              </div>
+            </li>
+            <li>
+              <b><code>node_gap_size</code></b>
+                  (<code><span title="int">int</span></code>, default:
+                      <code>0</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>Number of nodes to skip when generating the full graphs (default is 0, keep all).</p>
+              </div>
+            </li>
+            <li>
+              <b><code>num_workers</code></b>
+                  (<code><span title="int">int</span></code>, default:
+                      <code>20</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>Max processes used to extract frames in parallel (default 20, capped
+at the CPU count and the number of frames). Each extraction stage is
+independent per frame, so this fans out across frames.</p>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Returns:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+                  <code>None</code>
+              –
+              <div class="doc-md-description">
+                <p>The computed graphs and segment nodes are stored internally as <code>SkeletonizedMito</code> attributes.</p>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+
+</div><hr />
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="mitotnt.network_tracker.NetworkTracker" class="doc doc-heading">
+              <code class="highlight language-python">NetworkTracker</code>
+
+</h2>
+
+
+    <div class="doc doc-contents first">
+
+
+
+        <p>This class provides functionality to track skeletonized mitochondria
+in time-lapse imaging data. It uses distance and graph-based score to link
+mitochondrial nodes frame-to-frame and reconstruct trajectories
+under configurable tracking constraints.</p>
+
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Parameters:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+              <b><code>segmented_mito</code></b>
+                  (<code><a class="autorefs autorefs-internal" title="SkeletonizedMito (mitotnt.skeletonized_mito.SkeletonizedMito)" href="#mitotnt.skeletonized_mito.SkeletonizedMito">SkeletonizedMito</a></code>)
+              –
+              <div class="doc-md-description">
+                <p>Pre-processed mitochondrial data with skeletonized structures.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>frame_interval</code></b>
+                  (<code><span title="float">float</span></code>, default:
+                      <code>None</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>Time between consecutive frames, in seconds (default is 1.0).</p>
+              </div>
+            </li>
+            <li>
+              <b><code>start_frame</code></b>
+                  (<code><span title="int">int</span></code>, default:
+                      <code>0</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>Index of the first frame to include in tracking (default is 0).</p>
+              </div>
+            </li>
+            <li>
+              <b><code>end_frame</code></b>
+                  (<code><span title="int">int</span></code>, default:
+                      <code>None</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>Index of the last frame to include in tracking. If None, uses
+the total number of frames from <code>segmented_mito</code> (default is None).</p>
+              </div>
+            </li>
+            <li>
+              <b><code>tracking_interval</code></b>
+                  (<code><span title="int">int</span></code>, default:
+                      <code>1</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>The frame number difference for the two frames to be tracked
+(default is 1 so track every frame).</p>
+              </div>
+            </li>
+            <li>
+              <b><code>cutoff_num_neighbor</code></b>
+                  (<code><span title="int">int</span></code>, default:
+                      <code>10</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>Maximum number of nearest neighbors to consider when making node
+assignments across frames (default is 10).</p>
+              </div>
+            </li>
+            <li>
+              <b><code>cutoff_speed</code></b>
+                  (<code><span title="float">float</span></code>, default:
+                      <code>None</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>Maximum allowed speed of mitochondria (microns/frame interval).
+If None, no speed cutoff is applied (default is None).</p>
+              </div>
+            </li>
+            <li>
+              <b><code>graph_matching_depth</code></b>
+                  (<code><span title="int">int</span></code>, default:
+                      <code>2</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>Depth of neighborhood considered for graph matching (default is 2).</p>
+              </div>
+            </li>
+            <li>
+              <b><code>dist_exponent</code></b>
+                  (<code><span title="int">int</span></code>, default:
+                      <code>1</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>Exponent applied to spatial distance when computing costs
+(default is 1).</p>
+              </div>
+            </li>
+            <li>
+              <b><code>top_exponent</code></b>
+                  (<code><span title="int">int</span></code>, default:
+                      <code>1</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>Exponent applied to topological distance when computing costs
+(default is 1).</p>
+              </div>
+            </li>
+            <li>
+              <b><code>min_track_size</code></b>
+                  (<code><span title="int">int</span></code>, default:
+                      <code>4</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>Minimum number of frames required for a valid track (default is 4).</p>
+              </div>
+            </li>
+            <li>
+              <b><code>max_gap_size</code></b>
+                  (<code><span title="int">int</span></code>, default:
+                      <code>3</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>Maximum number of consecutive missing frames allowed when
+performing gap closing tracks.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>block_size_factor</code></b>
+                  (<code><span title="float">float</span></code>, default:
+                      <code>1.0</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>Values less than 1 allows using sliding blocks of cost matrix during gap closing
+to prevent memory overflow due to large number of tracks.
+(default is 1, close all tracks at the same time).</p>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Attributes:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+              <b><code>segmented_mito</code></b>
+                  (<code><a class="autorefs autorefs-internal" title="SkeletonizedMito (mitotnt.skeletonized_mito.SkeletonizedMito)" href="#mitotnt.skeletonized_mito.SkeletonizedMito">SkeletonizedMito</a></code>)
+              –
+              <div class="doc-md-description">
+                <p>Reference to the input mitochondrial skeleton data.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>start_frame</code></b>
+                  (<code><span title="int">int</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>First frame index used for tracking.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>end_frame</code></b>
+                  (<code><span title="int">int</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>Last frame index used for tracking.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>frame_interval</code></b>
+                  (<code><span title="float">float</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>Time between frames.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>tracking_interval</code></b>
+                  (<code><span title="int">int</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>Step size in frames when tracking.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>cutoff_num_neighbor</code></b>
+                  (<code><span title="int">int</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>Maxium number of neighbors to consider.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>cutoff_speed</code></b>
+                  (<code><span title="float">float</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>Speed threshold for tracking.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>graph_matching_depth</code></b>
+                  (<code><span title="int">int</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>Graph depth used in matching.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>dist_exponent</code></b>
+                  (<code><span title="int">int</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>Distance exponent in matching cost.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>top_exponent</code></b>
+                  (<code><span title="int">int</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>Topology exponent in matching cost.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>min_track_size</code></b>
+                  (<code><span title="int">int</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>Minimum valid trajectory length.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>max_gap_size</code></b>
+                  (<code><span title="int">int</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>Maximum number of frames for an allowed gap.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>block_size_factor</code></b>
+                  (<code><span title="float">float</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>Factor for using sliding cost blocks during gap closing.</p>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="mitotnt.network_tracker.NetworkTracker.reload_results" class="doc doc-heading">
+            <code class="highlight language-python">reload_results</code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Same as <code>run()</code> except reload previously saved results into <code>TrackedMito</code>.</p>
+
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Returns:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+                  <code><span title="object">object</span></code>
+              –
+              <div class="doc-md-description">
+                <p><code>TrackedMito</code> object with network tracking results and metadata.
+<code>TrackedMito.node_tracks</code> contains tabular data with each tracked node at one frame
+as rows and the following columns:</p>
+<ul>
+<li><code>frame_id</code> (int): the frame number.</li>
+<li><code>frame_node_id</code> (int): node id with frame-wise indexing.</li>
+<li><code>unique_node_id</code> (int): node id shared by all the nodes in the same track at different frames. Each track is uniquely indexed throughout the whole trajectory. This contains the tracking information.</li>
+<li><code>frame_seg_id</code> (int): segment id for each mitochondrial segment (between non-degree-2 nodes) with frame-wise indexing.</li>
+<li><code>frame_frag_id</code> (int): fragment id for each mitochondrial fragment (connected component) with frame-wise indexing.</li>
+<li><code>connected_unique_node_id</code> (str): space-delimited <code>unique_node_id</code> for tracked neigboring nodes in the graph. Note that the topology may be different from static graphs due to absence of untracked nodes.</li>
+<li><code>x</code>, <code>y</code>, <code>z</code>: coordinates for the node.</li>
+<li><code>intensity</code>, <code>width</code>: pixel intensity and tubular width for the node from MitoGraph.</li>
+</ul>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="mitotnt.network_tracker.NetworkTracker.run" class="doc doc-heading">
+            <code class="highlight language-python">run</code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Perform frame-to-frame tracking of mitochondria using the parameters declared in <code>NetworkTracker</code>.</p>
+
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Returns:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+                  <code><span title="object">object</span></code>
+              –
+              <div class="doc-md-description">
+                <p><code>TrackedMito</code> object with network tracking results and metadata.
+<code>TrackedMito.node_tracks</code> contains tabular data with each tracked node at one frame
+as rows and the following columns:</p>
+<ul>
+<li><code>frame_id</code> (int): the frame number.</li>
+<li><code>frame_node_id</code> (int): node id with frame-wise indexing.</li>
+<li><code>unique_node_id</code> (int): node id shared by all the nodes in the same track at different frames. Each track is uniquely indexed throughout the whole trajectory. This contains the tracking information.</li>
+<li><code>frame_seg_id</code> (int): segment id for each mitochondrial segment (between non-degree-2 nodes) with frame-wise indexing.</li>
+<li><code>frame_frag_id</code> (int): fragment id for each mitochondrial fragment (connected component) with frame-wise indexing.</li>
+<li><code>connected_unique_node_id</code> (str): space-delimited <code>unique_node_id</code> for tracked neigboring nodes in the graph. Note that the topology may be different from static graphs due to absence of untracked nodes.</li>
+<li><code>x</code>, <code>y</code>, <code>z</code>: coordinates for the node.</li>
+<li><code>intensity</code>, <code>width</code>: pixel intensity and tubular width for the node from MitoGraph.</li>
+</ul>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+
+</div><hr />
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="mitotnt.tracked_mito.TrackedMito" class="doc doc-heading">
+              <code class="highlight language-python">TrackedMito</code>
+
+</h2>
+
+
+    <div class="doc doc-contents first">
+
+
+
+        <p>This class stores the results of mitochondrial tracking based on
+skeletonized network representations.It also adds features such as diffusivity and remodeling events.</p>
+
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Parameters:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+              <b><code>segmented_mito</code></b>
+                  (<code><a class="autorefs autorefs-internal" title="SkeletonizedMito (mitotnt.skeletonized_mito.SkeletonizedMito)" href="#mitotnt.skeletonized_mito.SkeletonizedMito">SkeletonizedMito</a></code>)
+              –
+              <div class="doc-md-description">
+                <p>Pre-processed mitochondrial data with skeletonized structures.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>frame_interval</code></b>
+                  (<code><span title="float">float</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>Time between consecutive frames, in seconds.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>start_frame</code></b>
+                  (<code><span title="int">int</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>Index of the first frame used for tracking.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>end_frame</code></b>
+                  (<code><span title="int">int</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>Index of the last frame used for tracking.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>tracking_interval</code></b>
+                  (<code><span title="int">int</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>The frame number difference for the two frames to be tracked.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>node_tracks</code></b>
+                  (<code><span title="pandas.DataFrame">DataFrame</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>Table of tracked nodes across frames.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>linked_nodes</code></b>
+                  (<code><span title="numpy.ndarray">ndarray</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>Array describing frame-to-frame node linkages produced by the
+tracking algorithm.</p>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Attributes:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+              <b><code>data_path</code></b>
+                  (<code><span title="str">str</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>Path to the directory containing the original segmented data.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>save_path</code></b>
+                  (<code><span title="str">str</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>Path where tracking results are stored.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>list_of_folders</code></b>
+                  (<code>list of str</code>)
+              –
+              <div class="doc-md-description">
+                <p>Frame-level segmentation folders.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>num_frames</code></b>
+                  (<code><span title="int">int</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>Total number of frames in the dataset.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>xy_pxl_size</code></b>
+                  (<code><span title="float">float</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>Pixel resolution in the x–y plane (microns).</p>
+              </div>
+            </li>
+            <li>
+              <b><code>z_pxl_size</code></b>
+                  (<code><span title="float">float</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>Pixel resolution in the z axis (microns).</p>
+              </div>
+            </li>
+            <li>
+              <b><code>full_graphs</code></b>
+                  (<code><span title="list">list</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>Frame-wise full skeleton graphs of mitochondria.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>segment_nodes</code></b>
+                  (<code><span title="list">list</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>Nodes of individual mitochondrial segments.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>simple_graphs</code></b>
+                  (<code><span title="list">list</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>Simplified skeleton graphs for each frame.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>local_simple_graphs</code></b>
+                  (<code><span title="list">list</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>Simplified skeleton graphs restricted to local neighborhoods for each node.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>start_frame</code></b>
+                  (<code><span title="int">int</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>First frame index used for tracking.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>end_frame</code></b>
+                  (<code><span title="int">int</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>Last frame index used for tracking.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>frame_interval</code></b>
+                  (<code><span title="float">float</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>Time between frames.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>tracking_interval</code></b>
+                  (<code><span title="int">int</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>Step size in frames for linking nodes.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>node_tracks</code></b>
+                  (<code><span title="pandas.DataFrame">DataFrame</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>Computed from <code>NetworkTracker.run()</code>.
+Tabular data with each tracked node at one frame as a row, and columns
+include 'frame_id', 'frame_node_id', 'unique_node_id', 'frame_seg_id',
+'frame_frag_id', 'connected_unique_node_id', 'x', 'y', 'z', 'intensity',
+'width'.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>linked_nodes</code></b>
+                  (<code><span title="numpy.ndarray">ndarray</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>Computed from <code>NetworkTracker.run()</code>.
+Array of node linkages between frames.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>remodeling_events</code></b>
+                  (<code><span title="dict">dict</span> or None</code>)
+              –
+              <div class="doc-md-description">
+                <p>Placeholder for detected mitochondrial remodeling events (e.g.,
+fusion, fission). None until computed.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>node_diffusivity</code></b>
+                  (<code><span title="pandas.DataFrame">DataFrame</span> or None</code>)
+              –
+              <div class="doc-md-description">
+                <p>Placeholder for diffusivity metrics at the node level. None until
+computed.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>segment_diffusivity</code></b>
+                  (<code><span title="pandas.DataFrame">DataFrame</span> or None</code>)
+              –
+              <div class="doc-md-description">
+                <p>Placeholder for diffusivity metrics at the segment level. None until
+computed.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>fragment_diffusivity</code></b>
+                  (<code><span title="pandas.DataFrame">DataFrame</span> or None</code>)
+              –
+              <div class="doc-md-description">
+                <p>Placeholder for diffusivity metrics at the fragment level. None until
+computed.</p>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="mitotnt.tracked_mito.TrackedMito.compute_fragment_diffusivity" class="doc doc-heading">
+            <code class="highlight language-python">compute_fragment_diffusivity</code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Compute fragment-level diffusivity from tracked mitochondrial trajectories.</p>
+<p>For each fragment in selected center frames, this method aggregates node-level
+displacements into fragment-averaged displacements, computes time-averaged
+mean squared displacement (TA-MSD), and estimates diffusivity coefficients
+using a linear least-squares fit of MSD vs. lag time.</p>
+
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Parameters:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+              <b><code>max_tau</code></b>
+                  (<code><span title="int">int</span></code>, default:
+                      <code>5</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>Maximum time lag (in frames) for MSD calculation (default is 5).</p>
+              </div>
+            </li>
+            <li>
+              <b><code>tracked_ratio</code></b>
+                  (<code><span title="float">float</span></code>, default:
+                      <code>0.5</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>Minimum fraction of fragment nodes that must be tracked at a given lag
+for the fragment displacement to be considered (default is 0.5).</p>
+              </div>
+            </li>
+            <li>
+              <b><code>half_win_size</code></b>
+                  (<code><span title="int">int</span></code>, default:
+                      <code>10</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>Half-width of the temporal window (in frames) around each center frame
+used for displacement calculations (default is 10).</p>
+              </div>
+            </li>
+            <li>
+              <b><code>selected_frames</code></b>
+                  (<code>list of int</code>, default:
+                      <code>None</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>Specific frame indices to use as centers for fragment diffusivity
+analysis. If None, frames are auto-selected at intervals of
+<code>2 * half_win_size</code> across the dataset.</p>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Returns:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+                  <code>None</code>
+              –
+              <div class="doc-md-description">
+                <p>Results are stored in the attribute <code>self.fragment_diffusivity</code> as a
+pandas DataFrame and written to <code>fragment_diffusivity.csv</code>.
+Each row is a tracked fragment with the following columns:</p>
+<pre><code>- ``center_frame_id`` (int): Center frame used for the analysis.
+- ``seg_id`` (int): Fragment identifier within the frame.
+- ``diffusivity`` (float): Estimated diffusivity coefficient D.
+- ``msd`` (float): Fitted mean squared displacement per frame.
+- ``r_squared`` (float): Goodness of fit (R²) for the linear regression.
+- ``num_points`` (int): Number of time lags included in the fit.
+</code></pre>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="mitotnt.tracked_mito.TrackedMito.compute_mitochondria_diffusivity" class="doc doc-heading">
+            <code class="highlight language-python">compute_mitochondria_diffusivity</code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Wrapper to compute mitochondrial diffusivity at one or more structural levels:
+nodes, segments, or fragments.</p>
+
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Parameters:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+              <b><code>levels</code></b>
+                  (<code>list of strings</code>, default:
+                      <code>None</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>Structural levels at which to compute diffusivity. Choose from any combination of "node", "segment", "fragment"
+(default is ["node", "segment", "fragment"]).</p>
+              </div>
+            </li>
+            <li>
+              <b><code>max_tau</code></b>
+                  (<code><span title="int">int</span></code>, default:
+                      <code>5</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>Maximum time lag (in frames) for MSD calculation (default=5).</p>
+              </div>
+            </li>
+            <li>
+              <b><code>tracked_ratio</code></b>
+                  (<code><span title="float">float</span></code>, default:
+                      <code>0.3</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>Minimum fraction of nodes tracked at a given lag (default=0.3).
+Used only for segment and fragment diffusivity.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>half_win_size</code></b>
+                  (<code><span title="int">int</span></code>, default:
+                      <code>10</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>Half-width of the temporal window (in frames) around each center frame used for displacement calculations (default=10).
+Used only for segment and fragment diffusivity.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>selected_frames</code></b>
+                  (<code>list of int</code>, default:
+                      <code>None</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>Specific frame indices to use as centers for analysis. If None, frames are auto-selected at intervals of
+<code>2 * half_win_size</code> across the dataset. Used only for segment and fragment diffusivity.</p>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Returns:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+                  <code>None</code>
+              –
+              <div class="doc-md-description">
+                <p>Results are stored in class attributes and written to CSV files.</p>
+<p>For node diffusivity, each row is a tracked node with the following columns:
+    - <code>unique_node_id</code> (int): unique node track ID from TrackedMito.node_tracks
+    - <code>diffusivity</code> (float): Estimated diffusivity coefficient D.
+    - <code>msd</code> (float): Fitted mean squared displacement per frame.
+    - <code>r_squared</code> (float): Goodness of fit (R²) for the linear regression.
+    - <code>num_points</code> (int): Number of time lags included in the fit.</p>
+<p>For segment/fragment diffusivity, each row is a tracked segment/fragment with the following columns:
+    - <code>center_frame_id</code> (int): Center frame used for the analysis.
+    - <code>seg_id/frag_id</code> (int): Segment identifier within the frame.
+    - <code>diffusivity</code> (float): Estimated diffusivity coefficient D.
+    - <code>msd</code> (float): Fitted mean squared displacement per frame.
+    - <code>r_squared</code> (float): Goodness of fit (R²) for the linear regression.
+    - <code>num_points</code> (int): Number of time lags included in the fit.</p>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="mitotnt.tracked_mito.TrackedMito.compute_node_diffusivity" class="doc doc-heading">
+            <code class="highlight language-python">compute_node_diffusivity</code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Compute node-level diffusivity from tracked mitochondrial trajectories.</p>
+<p>For each tracked node, the time-averaged mean squared displacement (TA-MSD)
+is calculated over time lags up to <code>max_tau</code>. A linear least-squares fit of
+MSD vs. lag time is then used to estimate the diffusivity coefficient (D),
+assuming 3D diffusion (<code>MSD = 6Dt</code>).</p>
+
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Parameters:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+              <b><code>max_tau</code></b>
+                  (<code><span title="int">int</span></code>, default:
+                      <code>5</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>Maximum time lag (in frames) used to compute TA-MSD (default is 5).</p>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Returns:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+                  <code>None</code>
+              –
+              <div class="doc-md-description">
+                <p>Results are stored in the attribute <code>self.node_diffusivity</code> as a
+pandas DataFrame and written to <code>node_diffusivity.csv</code>. Each row is
+a tracked node with the following columns:</p>
+<ul>
+<li><code>unique_node_id</code> (int): Unique node track ID from TrackedMito.node_tracks</li>
+<li><code>diffusivity</code> (float): Estimated diffusivity coefficient D.</li>
+<li><code>msd</code> (float): Fitted mean squared displacement per frame.</li>
+<li><code>r_squared</code> (float): Goodness of fit (R²) for the linear regression.</li>
+<li><code>num_points</code> (int): Number of time lags included in the fit.</li>
+</ul>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="mitotnt.tracked_mito.TrackedMito.compute_segment_diffusivity" class="doc doc-heading">
+            <code class="highlight language-python">compute_segment_diffusivity</code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Compute segment-level diffusivity from tracked mitochondrial trajectories.</p>
+<p>For each segment in selected center frames, this method aggregates node-level
+displacements into segment-averaged displacements, computes time-averaged
+mean squared displacement (TA-MSD), and estimates diffusivity coefficients
+using a linear least-squares fit of MSD vs. lag time.</p>
+
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Parameters:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+              <b><code>max_tau</code></b>
+                  (<code><span title="int">int</span></code>, default:
+                      <code>5</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>Maximum time lag (in frames) for MSD calculation (default is 5).</p>
+              </div>
+            </li>
+            <li>
+              <b><code>tracked_ratio</code></b>
+                  (<code><span title="float">float</span></code>, default:
+                      <code>0.3</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>Minimum fraction of segment nodes that must be tracked at a given lag
+for the segment displacement to be considered (default is 0.3).</p>
+              </div>
+            </li>
+            <li>
+              <b><code>half_win_size</code></b>
+                  (<code><span title="int">int</span></code>, default:
+                      <code>10</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>Half-width of the temporal window (in frames) around each center frame
+used for displacement calculations (default is 10).</p>
+              </div>
+            </li>
+            <li>
+              <b><code>selected_frames</code></b>
+                  (<code>list of int</code>, default:
+                      <code>None</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>Specific frame indices to use as centers for segment diffusivity
+analysis. If None, frames are auto-selected at intervals of
+<code>2 * half_win_size</code> across the dataset.</p>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Returns:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+                  <code>None</code>
+              –
+              <div class="doc-md-description">
+                <p>Results are stored in the attribute <code>self.segment_diffusivity</code> as a
+pandas DataFrame and written to <code>segment_diffusivity.csv</code>.
+Each row is a tracked segment with the following columns:</p>
+<pre><code>- ``center_frame_id`` (int): Center frame used for the analysis.
+- ``seg_id`` (int): Segment identifier within the frame.
+- ``diffusivity`` (float): Estimated diffusivity coefficient D.
+- ``msd`` (float): Fitted mean squared displacement per frame.
+- ``r_squared`` (float): Goodness of fit (R²) for the linear regression.
+- ``num_points`` (int): Number of time lags included in the fit.
+</code></pre>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="mitotnt.tracked_mito.TrackedMito.detect_fusion_fission" class="doc doc-heading">
+            <code class="highlight language-python">detect_fusion_fission</code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Detect mitochondrial fusion and fission events.</p>
+<p>Scans tracked mitochondrial nodes across frames to identify topological
+remodeling events (fusion and fission). A sliding temporal window is
+applied to ensure that events are stable over multiple frames and not
+due to transient noise.</p>
+
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Parameters:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+              <b><code>start_frame</code></b>
+                  (<code><span title="int">int</span></code>, default:
+                      <code>None</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>First frame index to analyze. If None, defaults to previous
+<code>start_frame</code> + <code>half_win_size</code>.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>end_frame</code></b>
+                  (<code><span title="int">int</span></code>, default:
+                      <code>None</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>Last frame index to analyze. If None, defaults to previous
+<code>end_frame</code> - <code>half_win_size</code>.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>tracking_interval</code></b>
+                  (<code><span title="int">int</span></code>, default:
+                      <code>None</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>Frame step size for event detection. If None, defaults to the object's
+<code>tracking_interval</code>.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>half_win_size</code></b>
+                  (<code><span title="int">int</span></code>, default:
+                      <code>4</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>Half-width of the temporal window (in frames) used to confirm
+events (default is 4).</p>
+              </div>
+            </li>
+            <li>
+              <b><code>min_tracked_frames</code></b>
+                  (<code><span title="int">int</span></code>, default:
+                      <code>2</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>Minimum number of consecutive frames a node must be tracked
+to be considered in event detection (default is 2).</p>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Returns:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+                  <code>None</code>
+              –
+              <div class="doc-md-description">
+                <p>Results updated to <code>remodeling_events</code> attribute as a
+pandas DataFrame and written to <code>remodeling_events.csv</code>.
+Each row is a detected fusion or fission event, with the following columns:
+'type', 'frame_id', 'frame_id_before', 'frame_id_after',
+'node_id_before', 'node_id_after', 'frag_id_before','frag_id_after', 'unique_node_id'.</p>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+
+</div><hr />
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="mitotnt.visualizer.Visualizer" class="doc doc-heading">
+              <code class="highlight language-python">Visualizer</code>
+
+</h2>
+
+
+    <div class="doc doc-contents first">
+
+
+
+        <p>Prepare ChimeraX files for visualizing tracking.</p>
+
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Parameters:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+              <b><code>tracked_mito</code></b>
+                  (<code><a class="autorefs autorefs-internal" title="TrackedMito (mitotnt.tracked_mito.TrackedMito)" href="#mitotnt.tracked_mito.TrackedMito">TrackedMito</a></code>)
+              –
+              <div class="doc-md-description">
+                <p>Contains segmented mitochondria and network tracking results.</p>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Attributes:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+              <b><code>tracked_mito</code></b>
+                  (<code><a class="autorefs autorefs-internal" title="TrackedMito (mitotnt.tracked_mito.TrackedMito)" href="#mitotnt.tracked_mito.TrackedMito">TrackedMito</a></code>)
+              –
+              <div class="doc-md-description">
+                <p>Reference to the input <code>TrackedMito</code> object.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>visual_path</code></b>
+                  (<code><span title="str">str</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>Path to the directory where visualization scripts are saved (default is <code>TrackedMito.save_path</code> + 'visualization/').</p>
+              </div>
+            </li>
+            <li>
+              <b><code>visual_data_path</code></b>
+                  (<code><span title="str">str</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>Path to the directory where intermediate visualization data is saved (default is <code>TrackedMito.save_path</code> + 'visualization/data/').</p>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="mitotnt.visualizer.Visualizer.generate_chimerax_skeleton" class="doc doc-heading">
+            <code class="highlight language-python">generate_chimerax_skeleton</code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Export mitochondrial network skeletons to ChimeraX BILD format.</p>
+<p>Generates <code>.bild</code> files representing mitochondrial skeleton graphs
+for a specified frame range. Each skeleton is rendered as cylinders
+(edges) and spheres (nodes), which can be directly loaded into
+ChimeraX for 3D visualization.</p>
+
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Parameters:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+              <b><code>start_frame</code></b>
+                  (<code><span title="int">int</span></code>, default:
+                      <code>0</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>Index of the first frame to export (default is 0).</p>
+              </div>
+            </li>
+            <li>
+              <b><code>end_frame</code></b>
+                  (<code><span title="int">int</span></code>, default:
+                      <code>5</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>Index of the last frame to export (default is 5).</p>
+              </div>
+            </li>
+            <li>
+              <b><code>skeleton_colors</code></b>
+                  (<code>list of str</code>, default:
+                      <code>None</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>List of colors (ChimeraX color names or abbreviations) used for rendering
+skeletons. Each color is applied sequentially across frames. If None,
+defaults to blue for current frame and red for next frame.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>skeleton_size</code></b>
+                  (<code><span title="float">float</span></code>, default:
+                      <code>0.03</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>Cylinder radius for skeleton edges (default is 0.03).</p>
+              </div>
+            </li>
+            <li>
+              <b><code>node_size</code></b>
+                  (<code><span title="float">float</span></code>, default:
+                      <code>0.03</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>Sphere radius for nodes (default is 0.03).</p>
+              </div>
+            </li>
+            <li>
+              <b><code>show_nodes</code></b>
+                  (<code><span title="str">str</span></code>, default:
+                      <code>&#39;junctions&#39;</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>Which nodes to render as spheres: 'junctions' (only endpoints and
+branch points, degree != 2; default), 'all', or 'none'. The
+cylinders already draw the full skeleton, so at the default
+node_size the interior (degree-2) spheres are redundant; skipping
+them greatly reduces the primitive count and ChimeraX load time.</p>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Returns:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+                  <code>None</code>
+              –
+              <div class="doc-md-description">
+                <p>BILD files are written to the directory <code>self.visual_data_path</code>.</p>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="mitotnt.visualizer.Visualizer.generate_tracking_arrows" class="doc doc-heading">
+            <code class="highlight language-python">generate_tracking_arrows</code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Export tracking arrows between frames to ChimeraX BILD format.</p>
+<p>Generates <code>.bild</code> files that visualize temporal linkages of tracked
+mitochondrial nodes as arrows between consecutive frames. Each arrow
+connects the coordinate of a node in frame <code>t</code> to its linked node in
+frame <code>t + tracking_interval</code>.</p>
+
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Parameters:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+              <b><code>start_frame</code></b>
+                  (<code><span title="int">int</span></code>, default:
+                      <code>0</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>Index of the first frame to export arrows for (default is 0).</p>
+              </div>
+            </li>
+            <li>
+              <b><code>end_frame</code></b>
+                  (<code><span title="int">int</span></code>, default:
+                      <code>5</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>Index of the last frame to export arrows for (default is 5).</p>
+              </div>
+            </li>
+            <li>
+              <b><code>arrow_color</code></b>
+                  (<code><span title="str">str</span></code>, default:
+                      <code>&#39;black&#39;</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>Color of the arrows (ChimeraX color name or abbreviation, default is 'black').</p>
+              </div>
+            </li>
+            <li>
+              <b><code>arrow_size</code></b>
+                  (<code><span title="float">float</span></code>, default:
+                      <code>0.03</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>Radius of arrow shafts (default is 0.03). Arrowheads are scaled proportionally.</p>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Returns:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+                  <code>None</code>
+              –
+              <div class="doc-md-description">
+                <p>BILD files are written to the directory <code>self.visual_data_path</code>.</p>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="mitotnt.visualizer.Visualizer.map_mitochondria_fragment_motility" class="doc doc-heading">
+            <code class="highlight language-python">map_mitochondria_fragment_motility</code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Map fragment-level mitochondrial motility (diffusivity) to 3D visualization.</p>
+<p>For each selected frame, fragment-level diffusivity values are extracted from
+<code>self.tracked_mito.fragment_diffusivity</code> and mapped onto the skeleton graph.
+Each fragment is rendered by coloring its constituent nodes, represented as
+spheres, with colors reflecting normalized diffusivity values. The output
+is exported in ChimeraX BILD format for visualization.</p>
+
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Parameters:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+              <b><code>node_size</code></b>
+                  (<code><span title="float">float</span></code>, default:
+                      <code>0.3</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>Radius of spheres used to represent fragment nodes (default is 0.3).</p>
+              </div>
+            </li>
+            <li>
+              <b><code>selected_frames</code></b>
+                  (<code>list of int</code>, default:
+                      <code>None</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>Frame indices to visualize. Must be explicitly provided.</p>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Returns:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+                  <code>None</code>
+              –
+              <div class="doc-md-description">
+                <p><code>.bild</code> files are written to the directory <code>self.visual_path</code>.</p>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="mitotnt.visualizer.Visualizer.map_mitochondria_motility" class="doc doc-heading">
+            <code class="highlight language-python">map_mitochondria_motility</code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Wrapper to map mitochondrial motility (diffusivity) to 3D visualization
+at one or more structural levels: nodes, segments, or fragments.</p>
+
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Parameters:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+              <b><code>levels</code></b>
+                  (<code>list of strings</code>, default:
+                      <code>None</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>Structural levels at which to map motility. Choose from any combination of "node", "segment", "fragment"
+(default is ["node", "segment", "fragment"]).</p>
+              </div>
+            </li>
+            <li>
+              <b><code>node_size</code></b>
+                  (<code><span title="float">float</span></code>, default:
+                      <code>0.3</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>Radius of spheres used to represent nodes (default=0.3).</p>
+              </div>
+            </li>
+            <li>
+              <b><code>selected_frames</code></b>
+                  (<code>list of int</code>, default:
+                      <code>None</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>Frame indices to visualize. Must be explicitly provided.</p>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Returns:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+                  <code>None</code>
+              –
+              <div class="doc-md-description">
+                <p><code>.bild</code> visualization files are written to <code>self.visual_path</code>.</p>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="mitotnt.visualizer.Visualizer.map_mitochondria_node_motility" class="doc doc-heading">
+            <code class="highlight language-python">map_mitochondria_node_motility</code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Map node-level mitochondrial motility (diffusivity) to 3D visualization.</p>
+<p>For each selected frame, node-level diffusivity values are extracted from
+<code>self.tracked_mito.node_diffusivity</code> and mapped onto the skeleton graph.
+Nodes are rendered as spheres with colors representing normalized diffusivity.
+The output is exported in ChimeraX BILD format for visualization.</p>
+
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Parameters:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+              <b><code>node_size</code></b>
+                  (<code><span title="float">float</span></code>, default:
+                      <code>0.3</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>Radius of spheres used to represent nodes (default is 0.3).</p>
+              </div>
+            </li>
+            <li>
+              <b><code>selected_frames</code></b>
+                  (<code>list of int</code>, default:
+                      <code>None</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>Frame indices to visualize. Must be explicitly provided.</p>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Returns:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+                  <code>None</code>
+              –
+              <div class="doc-md-description">
+                <p><code>.bild</code> files are written to the directory <code>self.visual_path</code>.</p>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="mitotnt.visualizer.Visualizer.map_mitochondria_segment_motility" class="doc doc-heading">
+            <code class="highlight language-python">map_mitochondria_segment_motility</code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Map segment-level mitochondrial motility (diffusivity) to 3D visualization.</p>
+<p>For each selected frame, segment-level diffusivity values are extracted from
+<code>self.tracked_mito.segment_diffusivity</code> and mapped onto the skeleton graph.
+Each segment is rendered by coloring its constituent nodes, represented as
+spheres, with colors reflecting normalized diffusivity values. The output
+is exported in ChimeraX BILD format for visualization.</p>
+
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Parameters:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+              <b><code>node_size</code></b>
+                  (<code><span title="float">float</span></code>, default:
+                      <code>0.3</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>Radius of spheres used to represent segment nodes (default is 0.3).</p>
+              </div>
+            </li>
+            <li>
+              <b><code>selected_frames</code></b>
+                  (<code>list of int</code>, default:
+                      <code>None</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>Frame indices to visualize. Must be explicitly provided.</p>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Returns:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+                  <code>None</code>
+              –
+              <div class="doc-md-description">
+                <p><code>.bild</code> files are written to the directory <code>self.visual_path</code>.</p>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="mitotnt.visualizer.Visualizer.visualize_tracking" class="doc doc-heading">
+            <code class="highlight language-python">visualize_tracking</code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Generate a ChimeraX command script for visualizing mitochondrial tracking.</p>
+<p>Creates a <code>.cxc</code> script that loads skeletons, arrows, and optional TIFF volumes
+into ChimeraX for side-by-side visualization of tracked mitochondrial
+networks. Skeletons can be displayed either as constructed ChimeraX BILD skeletons
+or as raw Mitograph VTK files.</p>
+
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Parameters:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+              <b><code>start_frame</code></b>
+                  (<code><span title="int">int</span></code>, default:
+                      <code>0</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>Index of the first frame to visualize (default is 0).</p>
+              </div>
+            </li>
+            <li>
+              <b><code>end_frame</code></b>
+                  (<code><span title="int">int</span></code>, default:
+                      <code>5</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>Index of the last frame to visualize (default is 5).</p>
+              </div>
+            </li>
+            <li>
+              <b><code>show_tif</code></b>
+                  (<code><span title="bool">bool</span></code>, default:
+                      <code>True</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>If True, include raw TIFF volumes in the visualization (default is True).</p>
+              </div>
+            </li>
+            <li>
+              <b><code>tif_colors</code></b>
+                  (<code>list of str</code>, default:
+                      <code>None</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>List of two ChimeraX color names for rendering consecutive TIFF frames.
+If None, defaults to ['deep sky blue', 'tomato'].</p>
+              </div>
+            </li>
+            <li>
+              <b><code>threshold_level</code></b>
+                  (<code><span title="str">str</span></code>, default:
+                      <code>&#39;&#39;</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>Threshold setting for volume rendering (default is '', use ChimeraX defaults).</p>
+              </div>
+            </li>
+            <li>
+              <b><code>use_chimerax_skeleton</code></b>
+                  (<code><span title="bool">bool</span></code>, default:
+                      <code>True</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>If True, load skeletons exported in ChimeraX BILD format.
+If False, load original Mitograph VTK skeletons (default is True).</p>
+              </div>
+            </li>
+            <li>
+              <b><code>skeleton_colors</code></b>
+                  (<code>list of str</code>, default:
+                      <code>None</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>List of two ChimeraX color names for consecutive skeletons. If None,
+defaults to blue for current frame and red for next frame.</p>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Returns:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+                  <code>None</code>
+              –
+              <div class="doc-md-description">
+                <p>A ChimeraX command script <code>visualize_tracking.cxc</code> is written to
+<code>self.visual_path</code>.</p>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+
+</div><hr />
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="mitotnt.feature_extractor.FeatureExtractor" class="doc doc-heading">
+              <code class="highlight language-python">FeatureExtractor</code>
+
+</h2>
+
+
+    <div class="doc doc-contents first">
+
+
+
+        <p>Aggregate per-frame mitochondrial features from saved MitoTNT results into
+tidy (Feature, Value) tables and plot their distributions.</p>
+<p>Reads the artifacts written under the tracking <code>save_path</code>
+(<code>extracted_graphs.npz</code>, the <code>*_diffusivity.csv</code> files, and
+<code>remodeling_events.csv</code>) and produces three feature tables:
+<code>graph_features</code>, <code>motility_features</code>, and <code>remodeling_features</code>.</p>
+
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Parameters:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+              <b><code>tracked_mito</code></b>
+                  (<code><a class="autorefs autorefs-internal" title="TrackedMito (mitotnt.tracked_mito.TrackedMito)" href="#mitotnt.tracked_mito.TrackedMito">TrackedMito</a></code>, default:
+                      <code>None</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>A <code>TrackedMito</code> object; its <code>save_path</code> is used to locate results.
+Preferred, consistent with the rest of the API.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>save_path</code></b>
+                  (<code><span title="str">str</span></code>, default:
+                      <code>None</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>Path to the directory containing MitoTNT results (must end with a
+path separator). Used only if <code>tracked_mito</code> is not given.</p>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Attributes:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+              <b><code>save_path</code></b>
+                  (<code><span title="str">str</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>Directory the result files are read from / written to.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>graph_features</code></b>
+                  (<code><span title="pandas.DataFrame">DataFrame</span> or None</code>)
+              –
+              <div class="doc-md-description">
+                <p>Per-frame graph/topology features. None until computed.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>motility_features</code></b>
+                  (<code><span title="pandas.DataFrame">DataFrame</span> or None</code>)
+              –
+              <div class="doc-md-description">
+                <p>Diffusivity features by level. None until computed.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>remodeling_features</code></b>
+                  (<code><span title="pandas.DataFrame">DataFrame</span> or None</code>)
+              –
+              <div class="doc-md-description">
+                <p>Per-frame fusion/fission rates. None until computed.</p>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+
+</div>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../user_guide/" class="btn btn-neutral float-left" title="User Guide"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../user_guide/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

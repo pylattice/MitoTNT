@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Quick Start - MitoTNT</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../assets/_mkdocstrings.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Quick Start";
+        var mkdocs_page_input_path = "quick_start.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="..">
+          <img src="../contents/logo.png" class="logo" alt="Logo"/>
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../installation/">Installation</a>
+                </li>
+              </ul>
+              <ul class="current">
+                <li class="toctree-l1 current"><a class="reference internal current" href="#">Quick Start</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#fast-and-scalable">Fast and scalable</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#1-prepare-your-data">1. Prepare your data</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#2-segment-mitochondria-with-mitograph">2. Segment mitochondria with MitoGraph</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#3-extract-skeleton-graphs">3. Extract skeleton graphs</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#4-track-mitochondrial-networks">4. Track mitochondrial networks</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#5-visualize-in-chimerax">5. Visualize in ChimeraX</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#6-analyze-remodeling-and-motility">6. Analyze remodeling and motility</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#7-extract-and-plot-features">7. Extract and plot features</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#summary">Summary</a>
+    </li>
+    </ul>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../user_guide/">User Guide</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../api_reference/">API Reference</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">MitoTNT</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">Quick Start</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="quick-start">Quick Start</h1>
+<p>MitoTNT is a Python toolkit for analyzing the temporal dynamics of mitochondrial networks.<br />
+It integrates with <strong>MitoGraph</strong> for per-frame segmentation, then performs <strong>tracking, remodeling event detection, motility analysis, feature extraction, and ChimeraX visualization</strong>.</p>
+<p>This page walks through a typical workflow step by step.</p>
+<hr />
+<h2 id="fast-and-scalable">Fast and scalable</h2>
+<p>The core pipeline has been re-engineered to process large 4D datasets efficiently while producing results numerically equivalent to the original implementation:</p>
+<ul>
+<li><strong>Multiprocessing</strong> — graph extraction, topology-cost computation, and gap closing fan out across CPU cores (fork-based and copy-on-write, so the large graph objects are shared rather than pickled to each worker).</li>
+<li><strong>Batched graph construction</strong> — skeleton graphs are assembled with single bulk <code>add_vertices</code>/<code>add_edges</code> calls instead of per-node incremental edits, turning the previously O(N²) extraction into near-linear time (≈20× faster at ~140k nodes/frame).</li>
+<li><strong>KD-tree spatial search</strong> — <code>scipy.spatial.cKDTree</code> replaces brute-force O(N²) nearest-neighbor and coordinate-matching scans for candidate links and gap closing.</li>
+<li><strong>Sparse linear assignment</strong> — frame-to-frame and gap-closing linking are solved on sparse augmented cost matrices with the Jonker–Volgenant solver (<code>lap.lapmod</code>) instead of allocating dense matrices, drastically reducing memory on large frames.</li>
+<li><strong>Vectorized lookups</strong> — dict/set-based mappings throughout remove repeated linear scans and per-frame DataFrame re-filtering.</li>
+</ul>
+<p>In practice the full pipeline (tracking → remodeling → motility) processes a <strong>90-frame movie with ~1,400 nodes per frame in ~85 s on a multi-core workstation</strong>, and scales to substantially larger datasets. Worker counts are configurable via the <code>num_workers</code> argument.</p>
+<hr />
+<h2 id="1-prepare-your-data">1. Prepare your data</h2>
+<p>MitoTNT expects your raw time-lapse movie as a sequence of 3D image stacks (TIFF).<br />
+Each frame in time should be placed in its own folder, with a single <code>.tif</code> inside:</p>
+<pre><code>frame_000/frame_000.tif
+frame_001/frame_001.tif
+frame_002/frame_002.tif
+...
+
+</code></pre>
+<p>This format makes it easy for MitoGraph to write outputs back into each frame’s folder.<br />
+Make sure you have MitoGraph installed and accessible in your PATH.</p>
+<hr />
+<h2 id="2-segment-mitochondria-with-mitograph">2. Segment mitochondria with MitoGraph</h2>
+<p>MitoGraph takes each 3D stack and generates:
+- Surface meshes <code>.vtk</code> for visualization.
+- Supporting <code>.gnet</code>, <code>.coo</code>, and <code>.txt</code> files describing network structure.</p>
+<p>Run it through MitoTNT:</p>
+<pre><code class="language-python">import mitotnt
+
+seg = mitotnt.MitoSegmenter('D:/GitHub/MitoTNT/test_data/mitograph', 
+                            xy_pxl_size=0.145, z_pxl_size=0.145) # add image pixel sizes in microns/pixel
+
+seg.run_mitograph_cpu(max_workers=10) # specify the number of threads
+</code></pre>
+<ul>
+<li><code>xy_pxl_size</code> and <code>z_pxl_size</code> are <strong>microns per pixel</strong>, important for scaling.</li>
+<li>By default, results are saved inside each frame folder.</li>
+</ul>
+<p>You can preview segmentation results in <strong>ChimeraX</strong>:</p>
+<pre><code class="language-python">seg.visualize_segmented_data()
+</code></pre>
+<p>This generates a <code>.cxc</code> script for visual quality check of raw TIFFs alongside segmented surfaces.</p>
+<h2 id="3-extract-skeleton-graphs">3. Extract skeleton graphs</h2>
+<p>To prepare for tracking, you need to build graphs from MitoGraph outputs:</p>
+<pre><code class="language-python">skel = mitotnt.SkeletonizedMito(seg)
+skel.extract_graphs()
+</code></pre>
+<p>These graphs capture mitochondria location and connectivity and are the inputs to tracking.</p>
+<hr />
+<h2 id="4-track-mitochondrial-networks">4. Track mitochondrial networks</h2>
+<p>Tracking links network fragments across timepoints using both spatial and network information:</p>
+<pre><code class="language-python">tracker = mitotnt.NetworkTracker(skel, frame_interval=3.3)  # frame interval in seconds per frame
+tracked = tracker.run()
+</code></pre>
+<ul>
+<li>The algorithm maps nodes across frames, building trajectories for each mitochondrial fragment.</li>
+<li>Results are written to: <code>mitotnt/mito_node_tracks.csv</code> (all node trajectories).</li>
+</ul>
+<p>If you’ve already run once, reload results without recomputing to continue with the next sections:</p>
+<pre><code class="language-python">tracked = tracker.reload_results()
+</code></pre>
+<p>You can also restrict tracking to a subset of frames, or skip frames (useful for slower processes or faster processing).</p>
+<pre><code class="language-python">tracker = mitotnt.NetworkTracker(skel, frame_interval=3.3,
+                                 start_frame=10, end_frame=30,
+                                 tracking_interval=2)
+</code></pre>
+<hr />
+<h2 id="5-visualize-in-chimerax">5. Visualize in ChimeraX</h2>
+<p>MitoTNT can produce ready-to-load visualization scripts for <strong>UCSF ChimeraX</strong>:</p>
+<pre><code class="language-python">viz = mitotnt.Visualizer(tracked)
+viz.generate_chimerax_skeleton()  # skeleton structure
+viz.generate_tracking_arrows()  # tracking arrows
+viz.visualize_tracking()  # build full .cxc script
+</code></pre>
+<p>This creates a script:</p>
+<pre><code>mitotnt/visualization/visualize_tracking.cxc
+</code></pre>
+<p>Open it in ChimeraX to interactively explore:</p>
+<ul>
+<li><strong>Raw fluorescence cloud</strong> rendered for context.</li>
+<li><strong>Network skeletons</strong> across time.</li>
+<li><strong>Tracking arrows</strong> showing mitochondrial network movement.</li>
+</ul>
+<hr />
+<h2 id="6-analyze-remodeling-and-motility">6. Analyze remodeling and motility</h2>
+<p>Once tracking is complete, MitoTNT can quantify key mitochondrial behaviors:</p>
+<pre><code class="language-python"># Detect network remodeling (fusion &amp; fission events)
+tracked.detect_fusion_fission()
+
+# Compute motility at three levels:
+# node (voxel), segment (linear branch), fragment (connected component)
+tracked.compute_mitochondria_diffusivity() 
+</code></pre>
+<p>Each analysis writes a CSV file:</p>
+<ul>
+<li><code>remodeling_events.csv</code> → list of detected fusions/fissions.</li>
+<li><code>node_diffusivity.csv</code>, <code>segment_diffusivity.csv</code>, <code>fragment_diffusivity.csv</code> → quantitative mobility measures.</li>
+</ul>
+<p>These files can be imported for downstream analyses and plotting.</p>
+<hr />
+<h2 id="7-extract-and-plot-features">7. Extract and plot features</h2>
+<p><code>FeatureExtractor</code> aggregates the per-frame results from the previous steps into tidy tables for statistics and plotting. Run it after step 6, since it reads the diffusivity and remodeling outputs.</p>
+<pre><code class="language-python">fe = mitotnt.FeatureExtractor(tracked)  # or FeatureExtractor(save_path='.../mitotnt/')
+
+fe.compute_graph_features(save_csv=True)     # topology: lengths, widths, tortuosity, branching, efficiency, betweenness, ...
+fe.compute_diffusivity(save_csv=True)        # node/segment/fragment diffusivity (well-fit tracks only)
+fe.compute_remodeling_rates(save_csv=True)   # per-frame fusion and fission rates
+
+# Plot distributions for any computed category
+fe.plot_features_as_histogram()   # also: plot_features_as_violinplot(), plot_features_as_boxplot()
+</code></pre>
+<p>Each step writes a CSV:</p>
+<ul>
+<li><code>graph_features.csv</code> → network topology features per frame.</li>
+<li><code>motility_features.csv</code> → diffusivity values by level.</li>
+<li><code>remodeling_features.csv</code> → fusion/fission rates per frame.</li>
+</ul>
+<hr />
+<h2 id="summary">Summary</h2>
+<ol>
+<li>Organize your movie into per-frame 3D stacks.</li>
+<li>Run MitoGraph via <code>MitoSegmenter</code> to obtain skeletons.</li>
+<li>Extract graphs with <code>SkeletonizedMito</code>.</li>
+<li>Track fragments across frames using <code>NetworkTracker</code>.</li>
+<li>Visualize skeletons and dynamics in ChimeraX with <code>Visualizer</code>.</li>
+<li>Analyze remodeling events and motility with <code>TrackedMito</code>.</li>
+<li>Aggregate and plot features with <code>FeatureExtractor</code>.</li>
+</ol>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../installation/" class="btn btn-neutral float-left" title="Installation"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../user_guide/" class="btn btn-neutral float-right" title="User Guide">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../installation/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../user_guide/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

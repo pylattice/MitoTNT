@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>User Guide - MitoTNT</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../assets/_mkdocstrings.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "User Guide";
+        var mkdocs_page_input_path = "user_guide.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="..">
+          <img src="../contents/logo.png" class="logo" alt="Logo"/>
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../installation/">Installation</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../quick_start/">Quick Start</a>
+                </li>
+              </ul>
+              <ul class="current">
+                <li class="toctree-l1 current"><a class="reference internal current" href="#">User Guide</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#data-preparation">Data Preparation</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#1-convert-4d-movie-to-3d-stacks">1. Convert 4D movie to 3D stacks</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#2-extract-single-cell-3d-z-stacks-for-all-timepoints">2. Extract single cell 3D z-stacks for all timepoints</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#3-run-mitochondria-segmentation">3. Run mitochondria segmentation</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#4-check-segmentation-results">4. Check segmentation results</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#network-tracking">Network Tracking</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#1-generate-inputs-for-tracking">1. Generate inputs for tracking</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#2-mitochondrial-network-tracking">2. Mitochondrial network tracking</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#evaluate-output">Evaluate output</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#visualization">Visualization</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#1-create-chimerax-rendering-of-the-skeleton-optional-but-recommended">1. Create ChimeraX rendering of the skeleton (optional but recommended)</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#2-create-chimerax-rendering-of-tracking-vectors">2. Create ChimeraX rendering of tracking vectors</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#3-visualize-network-tracking-in-chimerax">3. Visualize network tracking in ChimeraX</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#post-tracking-analyses">Post Tracking Analyses</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#1-detect-network-remodeling-events">1. Detect network remodeling events</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#2-motility-measurements">2. Motility Measurements</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#feature-extraction">Feature Extraction</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#1-graph-topology-features">1. Graph (topology) features</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#2-motility-features">2. Motility features</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#3-remodeling-rates">3. Remodeling rates</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#4-plot-feature-distributions">4. Plot feature distributions</a>
+    </li>
+        </ul>
+    </li>
+    </ul>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../api_reference/">API Reference</a>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">MitoTNT</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">User Guide</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="user-guide">User Guide</h1>
+<h2 id="data-preparation">Data Preparation</h2>
+<p><strong>Before tracking, all 3D image stacks of mitochondria need to be segmented using MitoGraph.</strong></p>
+<h3 id="1-convert-4d-movie-to-3d-stacks">1. Convert 4D movie to 3D stacks</h3>
+<p>If your data is a 4D hyperstack, you will need to convert it into individual 3D image stacks.
+We have provided a utility script <code>convert_to_tiff.ipynb</code> under <code>helper_scripts</code> directory for this purpose.</p>
+<h3 id="2-extract-single-cell-3d-z-stacks-for-all-timepoints">2. Extract single cell 3D z-stacks for all timepoints</h3>
+<p>MitoGraph and MitoTNT usually work with mitochondria in a single cell. This helps to avoid tracking mitochondria across different cells and reduces the computational time significantly.
+In order to better organize the MitoGraph outputs, we also put the z-stack for each timepoint into a separate folder.</p>
+<p>Directory structure:</p>
+<ul>
+<li>test_data/mitograph/frame_000/frame_000.tif</li>
+<li>test_data/mitograph/frame_001/frame_001.tif<br />
+  . . .</li>
+<li>test_data/mitograph/frame_089/frame_089.tif  </li>
+</ul>
+<p>We have included a utility script <code>crop_image_using_ImageJ_ROI.ipynb</code> under the <code>helper_scripts</code> directory to read ImageJ ROI files to extract single cell z-stacks for each timepoint. 
+The user needs to draw rectangular boxes in ImageJ and save as <code>.roi</code> selection files under a ROI folder.</p>
+<h3 id="3-run-mitochondria-segmentation">3. Run mitochondria segmentation</h3>
+<p>After installing MitoGraph, confirm it by running it on command line. To run MitoGraph on all the timepoints in parallel, 
+we provide a python wrapper function:</p>
+<pre><code class="language-python">mito_segmenter = mitotnt.MitoSegmenter('D:/GitHub/MitoTNT/test_data/mitograph', 
+                                       xy_pxl_size=0.145, z_pxl_size=0.145)
+
+mito_segmenter.run_mitograph_cpu(max_workers=10)
+</code></pre>
+<p>MitoGraph outputs will be saved under each folder. Please find the documentation for the output files <a href="https://github.com/vianamp/MitoGraph/#mitograph-outputs">here</a>.</p>
+<h3 id="4-check-segmentation-results">4. Check segmentation results</h3>
+<p>We recommend using <a href="https://www.cgl.ucsf.edu/chimerax/">ChimeraX</a> or <a href="https://www.paraview.org/">ParaView</a> to visually inspect the quality of segmentation against your microscopy data.</p>
+<p>To create ChimeraX-ready scripts, run:</p>
+<pre><code class="language-python">mito_segmenter.visualize_segmented_data()
+</code></pre>
+<p>Load file <code>mitograph/check_mitograph.cxc</code> in ChimeraX to visualize raw data and mitograph-segmented surfaces.
+MitoGraph parameters may be fine-tuned if needed. More information can be found in this publication <a href="https://doi.org/10.1016/j.ab.2018.02.022">here</a>.</p>
+<p>Example 4D dataset is provided under <code>test_data/mitograph</code>, along with MitoGraph outputs that can be used for the next section.</p>
+<hr />
+<h2 id="network-tracking">Network Tracking</h2>
+<h3 id="1-generate-inputs-for-tracking">1. Generate inputs for tracking</h3>
+<p>First we need to compile the MitoGraph outputs into a format that is convenient for the subsequent tracking. We will pass the <code>mito_segmenter</code>
+object in the previous section to the <code>SkeletonizedMito()</code> and extract various graph representations. 
+See <em>API Reference</em> for a list of extracted data.</p>
+<p>There are two types of graphs, full graphs that include all voxel-level mitochondrial nodes, and 
+simple graphs that substitutes degree-2 nodes on linear segments with edges (typically used for network analyses). 
+To extract graphs from MitoGraph results:</p>
+<pre><code class="language-python">skeletonized_mito = mitotnt.SkeletonizedMito(mito_segmenter)
+skeletonized_mito.extract_graphs()
+</code></pre>
+<p>You can also opt to skip nodes while contructing full graphs for faster processing:</p>
+<pre><code class="language-python">skeletonized_mito.extract_graphs(node_gap_size=2)
+</code></pre>
+<p>Note that the <code>skeletonized_mito.simple_graphs</code> are igraph representation of segmented mitochondrial network 
+that can be used for downstream network analyses.</p>
+<h3 id="2-mitochondrial-network-tracking">2. Mitochondrial network tracking</h3>
+<p>Now we can perform the actual network tracking!</p>
+<p>First the algorithm wants to eliminate nodes that are too far to be even considered.
+Distance threshold is computed as the minimum of two values:<br />
+1) the distance to the N-th closest neighbor where N is given by <code>cutoff_num_neighbor</code>, default to 10;<br />
+2) the frame interval times the maximum allowed speed given by <code>cutoff_speed</code>, default to None and estimated from the distance matrix.</p>
+<p>Then we want to construct a cost matrix composed of both distance and topology costs:</p>
+<ul>
+<li><code>graph_matching_depth</code>: the maximum graph depth used for graph comparison (default is 2, usually sufficient).</li>
+<li><code>dist_exponent</code>, <code>top_exponent</code>: the final cost term is given by D<sup>dist_exponent</sup> × T<sup>top_exponent</sup>, 
+where D, T are the distance and topology costs respectively (default is 1, equal weighting).</li>
+</ul>
+<p>After frame-to-frame tracking across the entire movie, we also try to merge tracks with untracked gaps.</p>
+<ul>
+<li><code>min_track_size</code>: the minimum number of frames required for a track to be kept (default is 4).</li>
+<li><code>max_gap_size</code>: the maximum number of frames for which gap closing is allowed (default is 3).</li>
+</ul>
+<p>To run tracking, specify your movie's frame interval in seconds:</p>
+<pre><code class="language-python">network_tracker = mitotnt.NetworkTracker(skeletonized_mito, frame_interval=3.3)
+</code></pre>
+<p>By default, all frames as in the original MitoGraph folder will be tracked, you can also choose to track
+a fraction of it, e.g. skip time when scope drifts:</p>
+<pre><code class="language-python">network_tracker = mitotnt.NetworkTracker(skeletonized_mito, frame_interval=3.3, start_frame=20, end_frame=40)
+</code></pre>
+<p>You can also choose to skip frames while tracking to speed up processing or look at slow dynamics:</p>
+<pre><code class="language-python">network_tracker = mitotnt.NetworkTracker(skeletonized_mito, frame_interval=3.3, tracking_interval=4)
+</code></pre>
+<p>Now run tracking, this can take some time:</p>
+<pre><code class="language-python">tracked_mito = network_tracker.run()
+</code></pre>
+<p>If the data has already been written to the disk, and you want to continue the run:</p>
+<pre><code class="language-python">tracked_mito = network_tracker.reload_results()
+</code></pre>
+<h3 id="evaluate-output">Evaluate output</h3>
+<p>The tracking outputs are returned as a <code>TrackedMito</code> object and locally saved as <code>mitotnt/mito_node_tracks.csv</code>.<br />
+Each row is tracked node at one frame with the following columns:</p>
+<ul>
+<li><code>frame_id</code>: the frame number.</li>
+<li><code>frame_node_id</code> node id with frame-wise indexing.</li>
+<li><code>unique_node_id</code>: node id shared by all the nodes in the same track at different frames. Each track is uniquely indexed throughout the whole trajectory. This contains the tracking information.</li>
+<li><code>frame_seg_id</code>: segment id for each mitochondrial segment (between non-degree-2 nodes) with frame-wise indexing.</li>
+<li><code>frame_frag_id</code>: fragment id for each mitochondrial fragment (connected component) with frame-wise indexing.</li>
+<li><code>connected_unique_node_id</code>: space-delimited <code>unique_node_id</code> for tracked neighboring nodes in the graph. Note that the topology may be different from static graphs due to absence of untracked nodes.</li>
+<li><code>x</code>, <code>y</code>, <code>z</code>: coordinates for the node</li>
+<li><code>intensity</code>, <code>width</code>: pixel intensity and tubular width for the node from MitoGraph.</li>
+</ul>
+<hr />
+<h2 id="visualization">Visualization</h2>
+<p><strong>In this section we will visualize the tracked mitochondrial networks in ChimeraX.</strong><br />
+<strong>Please first download <a href="https://www.cgl.ucsf.edu/chimerax/">ChimeraX</a>.</strong></p>
+<p>Create a <code>Visualizer</code> object by feeding a <code>TrackedMito</code> object.</p>
+<pre><code class="language-python">visualization = mitotnt.Visualizer(tracked_mito)
+</code></pre>
+<h3 id="1-create-chimerax-rendering-of-the-skeleton-optional-but-recommended">1. Create ChimeraX rendering of the skeleton (optional but recommended)</h3>
+<p>We can use MitoGraph-generated <code>*skeleton.vtk</code> files for visualizing skeleton, but this is not ideal because it has fixed width and color.<br />
+Alternatively here, we can render the skeleton using BILD format in ChimeraX. This allows us to set the skeleton sizes, node sizes and color. 
+However, it also takes longer to load.</p>
+<ul>
+<li><code>skeleton_colors</code>: a list of two colors to render for current and next frames (default is blue for current frame and red for next frame). <a href="https://www.cgl.ucsf.edu/chimerax/docs/user/commands/colornames.html">See more colors.</a></li>
+<li><code>skeleton_size</code>: radius of the cylinder that connects nodes (default is 0.03).</li>
+<li><code>node_size</code>: radius of the nodes (default is 0.03, same as <code>skeleton_size</code> and the nodes are not highlighted).</li>
+</ul>
+<pre><code class="language-python">visualization.generate_chimerax_skeleton()
+</code></pre>
+<h3 id="2-create-chimerax-rendering-of-tracking-vectors">2. Create ChimeraX rendering of tracking vectors</h3>
+<p>We will use the frame-to-frame node assignments to draw the tracking vectors for two frames.</p>
+<ul>
+<li><code>arrow_color</code>: color of the tracking arrows ( default is 'black').</li>
+<li><code>arrow_size</code>: Radius of arrow shafts (default is 0.03). Arrowheads are scaled proportionally.</li>
+</ul>
+<pre><code class="language-python">visualization.generate_tracking_arrows()
+</code></pre>
+<h3 id="3-visualize-network-tracking-in-chimerax">3. Visualize network tracking in ChimeraX</h3>
+<p>Now we can combine the visualization files created above to visualize the tracking of timelapse data.</p>
+<ul>
+<li><code>show_tif</code>: whether to include fluorescence cloud in background (default is True).</li>
+<li><code>tif_colors</code>: List of two ChimeraX color names for rendering consecutive TIFF frames (defaults to <code>['deep sky blue', 'tomato']</code>). See <a href="https://www.cgl.ucsf.edu/chimerax/docs/user/commands/colornames.html">colors</a> for more options.</li>
+<li><code>threshold_level</code>: Threshold setting for volume rendering (default is '', use ChimeraX defaults). See the <a href="https://www.cgl.ucsf.edu/chimerax/docs/user/commands/volume.html">level argument</a> in ChimeraX.</li>
+<li><code>use_chimerax_skeleton</code>: If True, load skeletons exported in ChimeraX BILD format. If False, load original Mitograph VTK skeletons (default is True).</li>
+<li><code>skeleton_colors</code>: same as previous step.</li>
+</ul>
+<pre><code class="language-python">visualization.visualize_tracking()
+</code></pre>
+<p><strong>Open <code>mitotnt/visualization/visualize_tracking.cxc</code> in ChimeraX. This may take some time. Click <code>Home -&gt; Background -&gt; White</code> enhance visibility.</strong></p>
+<hr />
+<h2 id="post-tracking-analyses">Post Tracking Analyses</h2>
+<h3 id="1-detect-network-remodeling-events">1. Detect network remodeling events</h3>
+<p><strong>In this section we will detect nodes that undergo fusion or fission events based on the tracking data.</strong></p>
+<p>This is done using a sliding-window approach to identify nodes that undergo persistent structural changes as opposed to transient segmentation differences.<br />
+First, the fragment indices for each node are recorded for <code>half_win_size</code> frames before and after the current frame, to form the fragment list.<br />
+Second, for each network edge, the fragment lists for the connected nodes are compared.<br />
+Finally, fission will be declared if the fragment lists before the current frame are strictly identical, as well as the fragment lists after the current frame are strictly non-overlapping. 
+Since fusion events can be considered as fission events reversed in time, the opposite criterion is used for fusion detection.<br />
+Multiple remodeling nodes located in proximity (less than 5 edges away) are grouped into a single fission/fusion site.  </p>
+<ul>
+<li><code>tracking_interval</code>: step size for the sliding window in frames (default is None, inherits the value used during tracking).</li>
+<li><code>half_win_size</code>: size of the half sliding window in number of frames (default is 4). The higher the value the stricter the requirement for calling fusion/fission.</li>
+<li><code>min_tracked_frames</code>: minimum number of frames that are tracked in both half window in order to declare an event (default is 2).</li>
+</ul>
+<p>To detect remodeling events:</p>
+<pre><code class="language-python">tracked_mito.detect_fusion_fission()
+</code></pre>
+<p>Results are updated to <code>tracked_mito.remodeling_events</code> as a pandas DataFrame and written to <code>mitotnt/remodeling_events.csv</code>.</p>
+<p>Each row is a detected fusion or fission event, with the following columns (numbers are space-delimited):</p>
+<ul>
+<li><code>type</code>: fusion or fission.</li>
+<li><code>frame_id</code>: a single frame number for describing when the event happens.</li>
+<li><code>frame_id_before</code>: the frame numbers before the event for each detected node (maybe different due to gap closing).</li>
+<li><code>frame_id_after</code>: the frame numbers after the event for each detected node (maybe different due to gap closing).</li>
+<li><code>node_id_before</code>: the <code>frame_node_id</code> at corresponding frame before the event for each detected node.</li>
+<li><code>node_id_after</code>: the <code>frame_node_id</code> at corresponding frame after the event for each detected node.</li>
+<li><code>frag_id_before</code>: the <code>frame_frag_id</code> at corresponding frame before the event for each detected node.</li>
+<li><code>frag_id_after</code>: the <code>frame_frag_id</code> at corresponding frame after the event for each detected node.</li>
+<li><code>unique_node_id</code>: the <code>unique_node_id</code> for each detected node.
+<code>frame_node_id</code>, <code>frame_frag_id</code>, <code>unique_node_id</code> are as defined in the node tracking outputs.</li>
+</ul>
+<h3 id="2-motility-measurements">2. Motility Measurements</h3>
+<p><strong>In this section we will use the tracking outputs to compute diffusivity at three levels in mitochondria.</strong></p>
+<p>The motility can be computed for 1) nodes, 2) segments, 3) fragments, in the order of more coarse-graining.<br />
+A node is the most fundamental tracked unit — basically a single voxel along the mitochondrial skeleton at a given frame.
+A segment, or branch is a continuous edge in the skeleton graph, composed of all the nodes between branching or terminal nodes .
+A fragment is a connected component of the mitochondrial network (i.e. a whole mitochondrion, whether a small blob or an entire tubular network).</p>
+<p>Motility as measured by diffusivity coefficient is computed by tracking how far mitochondria (nodes, segments, or fragments) move over increasing time lags and calculating
+the mean squared displacement (MSD). The slope of MSD versus time is then divided by 6 (for 3D motion) to estimate the diffusivity coefficient.</p>
+<p>Parameters for computing MSD vs. time delay curve:</p>
+<ul>
+<li><code>max_tau</code>: maximum number of frames/datapoints used for linear fitting (default is 5).</li>
+</ul>
+<p>Additional parameters for computing segment and fragment level diffusivity:</p>
+<ul>
+<li><code>tracked_ratio</code>: the minimum ratio of tracked nodes in each segment/fragment to be qualified for calculating diffusivity (default is 0.3).</li>
+<li><code>selected_frames</code>: the frames that segment and fragment topology references are taken. This is needed due to the constant network remodeling through
+fusion and fission, thus changing segments/fragments. 
+If not given, frames are auto-selected at intervals of 2×<code>half_win_size</code> across the movie.</li>
+<li><code>half_win_size</code>: the time window size (frames) before and after the selected center frames for checking topology (default is 10).</li>
+</ul>
+<p>To compute diffusivity, use:</p>
+<pre><code class="language-python">tracked_mito.compute_mitochondria_diffusivity()
+</code></pre>
+<p>Or choose to only compute node diffusivity:</p>
+<pre><code class="language-python">tracked_mito.compute_mitochondria_diffusivity(levels=['node'])
+</code></pre>
+<p>Results are stored in the attributes <code>tracked_mito.node_diffusivity</code>, <code>tracked_mito.segment_diffusivity</code>, <code>tracked_mito.fragment_diffusivity</code>.
+The corresponding .csv files are also saved onto disk.</p>
+<p>Each row is a tracked node/segment/fragment with the following columns:</p>
+<ul>
+<li><code>unique_node_id</code>: Unique node track ID from mito_node_tracks.csv (only for node_diffusivity).</li>
+<li><code>center_frame_id</code>: Center frame used for the analysis (only for segment_diffusivity and fragment_diffusivity).</li>
+<li><code>seg_id/frag_id</code>: Segment identifier within the frame (only for segment_diffusivity and fragment_diffusivity).</li>
+<li><code>diffusivity</code>: Estimated diffusivity coefficient D.</li>
+<li><code>msd</code>: Fitted mean squared displacement per frame.</li>
+<li><code>r_squared</code>: Goodness of fit (R²) for the linear regression.</li>
+<li><code>num_points</code>: Number of time lags included in the fit.</li>
+</ul>
+<p><strong>The remodeling events and motility data are now yours to explore. Feel free to use them in your own research and plot figures in your desired style.</strong></p>
+<hr />
+<h2 id="feature-extraction">Feature Extraction</h2>
+<p><strong>In this section we will aggregate the per-frame results into tidy tables for statistics and plotting.</strong></p>
+<p><code>FeatureExtractor</code> collects the outputs produced in the previous steps (the extracted graphs, the diffusivity CSVs, and the remodeling events) into three feature tables. Create it from a <code>TrackedMito</code> object, or directly from a results directory:</p>
+<pre><code class="language-python">feature_extractor = mitotnt.FeatureExtractor(tracked_mito)   # or FeatureExtractor(save_path='.../mitotnt/')
+</code></pre>
+<p>Run feature extraction after the post-tracking analyses, since <code>compute_diffusivity</code> reads the <code>*_diffusivity.csv</code> files and <code>compute_remodeling_rates</code> reads <code>remodeling_events.csv</code>.</p>
+<h3 id="1-graph-topology-features">1. Graph (topology) features</h3>
+<p>Per-frame network topology computed from the extracted graphs: node/segment/fragment counts, segment lengths and widths, fragment length/diameter/tortuosity, graph density, global efficiency, clustering coefficient, betweenness, and branching ratios.</p>
+<pre><code class="language-python">feature_extractor.compute_graph_features(save_csv=True)
+</code></pre>
+<p>Results are stored in <code>feature_extractor.graph_features</code> and written to <code>mitotnt/graph_features.csv</code>.</p>
+<h3 id="2-motility-features">2. Motility features</h3>
+<p>Diffusivity values gathered from the node/segment/fragment diffusivity CSVs, keeping only well-fit tracks (R² &gt; 0.8 and at least 3 points).</p>
+<pre><code class="language-python">feature_extractor.compute_diffusivity(save_csv=True)
+</code></pre>
+<p>Results are stored in <code>feature_extractor.motility_features</code> and written to <code>mitotnt/motility_features.csv</code>.</p>
+<h3 id="3-remodeling-rates">3. Remodeling rates</h3>
+<p>Per-frame fusion and fission rates, normalized by the number of nodes in each frame.</p>
+<pre><code class="language-python">feature_extractor.compute_remodeling_rates(save_csv=True)
+</code></pre>
+<p>Results are stored in <code>feature_extractor.remodeling_features</code> and written to <code>mitotnt/remodeling_features.csv</code>.</p>
+<h3 id="4-plot-feature-distributions">4. Plot feature distributions</h3>
+<p>Each computed feature category can be plotted as histograms, violin plots, or box plots:</p>
+<pre><code class="language-python">feature_extractor.plot_features_as_histogram()
+feature_extractor.plot_features_as_violinplot()
+feature_extractor.plot_features_as_boxplot()
+</code></pre>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../quick_start/" class="btn btn-neutral float-left" title="Quick Start"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../api_reference/" class="btn btn-neutral float-right" title="API Reference">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../quick_start/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../api_reference/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>
